@@ -2,17 +2,14 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>😺 Greedy Cat MAX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>😺 Greedy Cat MAX – Ultimate AI</title>
 
 <style>
 body{
-  background:#0f0f0f;
-  color:#fff;
+  background:#0f0f0f;color:#fff;
   font-family:'Cairo',Tahoma,Arial;
-  direction:rtl;
-  text-align:center;
-  margin:0;
+  direction:rtl;text-align:center;margin:0
 }
 h1{margin:12px 0}
 .card{
@@ -20,13 +17,13 @@ h1{margin:12px 0}
   margin:10px auto;
   padding:14px;
   border-radius:16px;
-  max-width:420px;
-  box-shadow:0 0 14px #000;
+  max-width:480px;
+  box-shadow:0 0 14px #000
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:10px;
+  gap:10px
 }
 .btn{
   font-size:2em;
@@ -35,20 +32,27 @@ h1{margin:12px 0}
   cursor:pointer;
   background:#161616;
   border:2px solid #333;
-  transition:.15s;
+  position:relative;
 }
-.btn:active{transform:scale(.95)}
-.small{font-size:.9em;color:#aaa}
-.percent{
-  font-size:1em;
-  line-height:1.8;
-  margin-top:8px;
+.btn.hot{
+  border-color:#ff9800;
+  box-shadow:0 0 10px #ff980088;
 }
-.bar{
-  font-size:1.5em;
-  line-height:1.9;
-  word-wrap:break-word;
+.hotTag{
+  position:absolute;
+  top:2px;right:4px;
+  font-size:.6em;
+  color:#ff9800;
 }
+.bar{font-size:1.4em;line-height:1.9}
+.percent{line-height:1.7}
+.reco{font-size:1.6em;line-height:2}
+.table{
+  font-size:.95em;
+  text-align:right;
+  line-height:1.7
+}
+.small{font-size:.85em;color:#aaa}
 </style>
 </head>
 
@@ -56,96 +60,152 @@ h1{margin:12px 0}
 
 <h1>😺 Greedy Cat MAX</h1>
 
-<!-- أزرار اللعب -->
+<!-- أزرار -->
 <div class="card">
   <div class="grid" id="buttons"></div>
-  <div class="small">اضغط = تسجيل الدور</div>
+  <div class="small">
+    ضغطة = تسجيل الدور<br>
+    دبل كليك = HOT 🔥 (مؤشر ذكي)
+  </div>
 </div>
 
-<!-- شريط آخر 20 دور -->
+<!-- شريط -->
 <div class="card">
   📋 آخر 20 دور:
   <div class="bar" id="last20">(فارغ)</div>
 </div>
 
-<!-- النسب المئوية -->
+<!-- توصية -->
 <div class="card">
-  📊 النِسَب المئوية (من كل الأدوار):
-  <div class="percent" id="percentages"></div>
+  🔮 التوصية الذكية (5):
+  <div class="reco" id="recommendation">(سجّل لعب)</div>
+  <div class="small">مبنية على التاريخ + الترند + الغياب + HOT</div>
 </div>
 
-<!-- تحكم -->
+<!-- إحصائيات -->
+<div class="card">
+  📊 إحصائيات تفصيلية:
+  <div class="table" id="stats"></div>
+</div>
+
 <div class="card">
   <button onclick="resetAll()">مسح الكل 🗑️</button>
 </div>
 
 <script>
-// الأصناف
 const items = ["🐔","🐟","🦐","🍗","🥕","🌽","🍅","🌶️"];
 
-// تحميل البيانات
-let data = JSON.parse(localStorage.getItem("gc_max_data")) || {
-  history: [] // بلا نهاية
+let data = JSON.parse(localStorage.getItem("gc_full_ai")) || {
+  history: [],
+  hot: {}
 };
 
-// حفظ
 function save(){
-  localStorage.setItem("gc_max_data", JSON.stringify(data));
+  localStorage.setItem("gc_full_ai", JSON.stringify(data));
 }
 
-// تسجيل دور
+// تسجيل
 function addItem(item){
   data.history.push(item);
-  save();
-  render();
+  save(); render();
 }
 
-// رسم الأزرار
+// HOT
+function toggleHot(item){
+  data.hot[item] = !data.hot[item];
+  save(); render();
+}
+
+// أزرار
 function renderButtons(){
   let html="";
   items.forEach(i=>{
-    html += `<div class="btn" onclick="addItem('${i}')">${i}</div>`;
+    const hot = data.hot[i];
+    html += `
+    <div class="btn ${hot?'hot':''}"
+      onclick="addItem('${i}')"
+      ondblclick="toggleHot('${i}')">
+      ${i}${hot?'<div class="hotTag">🔥</div>':''}
+    </div>`;
   });
   document.getElementById("buttons").innerHTML = html;
 }
 
-// تحديث شريط آخر 20
+// آخر 20
 function renderLast20(){
   const last20 = data.history.slice(-20);
   document.getElementById("last20").innerText =
     last20.length ? last20.join(" ") : "(فارغ)";
 }
 
-// حساب النسب
-function renderPercentages(){
+// توصية ذكية
+function renderRecommendation(){
   const total = data.history.length;
-  let text = total ? "" : "لسه مفيش بيانات";
+  if(total < 5){
+    document.getElementById("recommendation").innerText = "سجّل أدوار أكتر";
+    return;
+  }
+
+  const last20 = data.history.slice(-20);
+  let scores = {};
 
   items.forEach(item=>{
-    const count = data.history.filter(x=>x===item).length;
-    if(count>0){
-      const percent = ((count/total)*100).toFixed(1);
-      text += `${item} : ${percent}%<br>`;
-    }
+    const totalC = data.history.filter(x=>x===item).length;
+    const lastC = last20.filter(x=>x===item).length;
+    const lastIdx = data.history.lastIndexOf(item);
+    const gap = lastIdx === -1 ? total : total - lastIdx;
+
+    let score =
+      (totalC/total)*40 +
+      (lastC/20)*40 +
+      Math.min(gap,20);
+
+    if(data.hot[item]) score += 8;
+
+    scores[item] = score;
   });
 
-  document.getElementById("percentages").innerHTML = text;
+  const top5 = Object.entries(scores)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,5)
+    .map(x=>x[0])
+    .join(" ");
+
+  document.getElementById("recommendation").innerText = top5;
 }
 
-// مسح الكل
+// جدول الإحصائيات
+function renderStats(){
+  const total = data.history.length;
+  let html = "";
+  items.forEach(item=>{
+    const count = data.history.filter(x=>x===item).length;
+    const lastIdx = data.history.lastIndexOf(item);
+    const lastSeen = lastIdx === -1 ? "—" : (total - lastIdx) + " دور";
+    const gap = lastIdx === -1 ? total : total - lastIdx - 1;
+
+    html += `
+    ${item} |
+    العدد: ${count} |
+    آخر مرة: ${lastSeen} |
+    غايب: ${gap} دور
+    <br>`;
+  });
+  document.getElementById("stats").innerHTML = html;
+}
+
 function resetAll(){
-  if(confirm("مسح كل السجل؟")){
-    data.history = [];
-    save();
-    render();
+  if(confirm("مسح كل البيانات؟")){
+    data={history:[],hot:{}};
+    save(); render();
   }
 }
 
-// رسم الكل
 function render(){
   renderButtons();
   renderLast20();
-  renderPercentages();
+  renderRecommendation();
+  renderStats();
 }
 
 render();
