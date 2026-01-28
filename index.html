@@ -3,141 +3,153 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>😺 Greedy Cat MAX – Ultimate</title>
+<title>😺 Greedy Cat MAX</title>
+
 <style>
 body{
-  background:#0f0f0f;color:#fff;
+  background:#0f0f0f;
+  color:#fff;
   font-family:'Cairo',Tahoma,Arial;
-  direction:rtl;text-align:center;margin:0
+  direction:rtl;
+  text-align:center;
+  margin:0;
 }
-h1{margin:14px 0}
+h1{margin:12px 0}
 .card{
   background:#1a1a1a;
   margin:10px auto;
   padding:14px;
   border-radius:16px;
   max-width:420px;
-  box-shadow:0 0 14px #000
+  box-shadow:0 0 14px #000;
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:10px
+  gap:10px;
 }
 .btn{
   font-size:2em;
-  padding:10px 0;
+  padding:12px 0;
   border-radius:14px;
   cursor:pointer;
   background:#161616;
   border:2px solid #333;
-  transition:.15s
+  transition:.15s;
 }
 .btn:active{transform:scale(.95)}
-.hot{border-color:#ff9800;box-shadow:0 0 10px #ff980088}
-.alert{color:#ffb300;font-weight:bold}
-.safe{color:#4caf50;font-weight:bold}
 .small{font-size:.9em;color:#aaa}
-.top5 span{margin:0 4px}
-.score{font-size:.8em;color:#9cff57}
+.percent{
+  font-size:1em;
+  line-height:1.8;
+  margin-top:8px;
+}
+.bar{
+  font-size:1.5em;
+  line-height:1.9;
+  word-wrap:break-word;
+}
 </style>
 </head>
 
 <body>
+
 <h1>😺 Greedy Cat MAX</h1>
 
-<div class="card" id="status"></div>
-
+<!-- أزرار اللعب -->
 <div class="card">
   <div class="grid" id="buttons"></div>
-  <div class="small">اضغط ضغطة = تسجيل | ضغطتين = تثبيت 🔥</div>
+  <div class="small">اضغط = تسجيل الدور</div>
 </div>
 
+<!-- شريط آخر 20 دور -->
 <div class="card">
-  <div class="top5" id="top5"></div>
-  <div class="small" id="reason"></div>
+  📋 آخر 20 دور:
+  <div class="bar" id="last20">(فارغ)</div>
 </div>
 
+<!-- النسب المئوية -->
+<div class="card">
+  📊 النِسَب المئوية (من كل الأدوار):
+  <div class="percent" id="percentages"></div>
+</div>
+
+<!-- تحكم -->
 <div class="card">
   <button onclick="resetAll()">مسح الكل 🗑️</button>
 </div>
 
 <script>
-const meats=["🐔","🐟","🦐","🍗"];
-const vegs=["🥕","🌽","🍅","🌶️"];
-const all=[...meats,...vegs];
+// الأصناف
+const items = ["🐔","🐟","🦐","🍗","🥕","🌽","🍅","🌶️"];
 
-let data=JSON.parse(localStorage.getItem("gc_max"))||{
-  selected:[],
-  hot:{}
+// تحميل البيانات
+let data = JSON.parse(localStorage.getItem("gc_max_data")) || {
+  history: [] // بلا نهاية
 };
 
+// حفظ
 function save(){
-  localStorage.setItem("gc_max",JSON.stringify(data));
+  localStorage.setItem("gc_max_data", JSON.stringify(data));
 }
 
-function add(item){
-  if(data.selected.length>=100) data.selected.shift();
-  data.selected.push(item);
-  save(); render();
+// تسجيل دور
+function addItem(item){
+  data.history.push(item);
+  save();
+  render();
 }
 
-function toggleHot(item){
-  data.hot[item]=!data.hot[item];
-  save(); render();
-}
-
-function score(item){
-  let total=data.selected.filter(x=>x===item).length;
-  let last10=data.selected.slice(-10).filter(x=>x===item).length;
-  let lastIdx=data.selected.lastIndexOf(item);
-  let gap=lastIdx===-1?20:data.selected.length-lastIdx;
-  return total*2 + last10*3 + (gap>12?4:0) + (data.hot[item]?6:0);
-}
-
-function render(){
-  let scores=all.map(i=>[i,score(i)])
-    .sort((a,b)=>b[1]-a[1]);
-
-  let meatCount=data.selected.filter(x=>meats.includes(x)).length;
-  let vegCount=data.selected.filter(x=>vegs.includes(x)).length;
-
-  let danger = meatCount>vegCount*2 || vegCount>meatCount*2;
-
-  document.getElementById("status").innerHTML=
-    danger
-    ? "🚨 <span class='alert'>وضع خطر – اللعبة بتلف</span>"
-    : "✅ <span class='safe'>الوضع مستقر – كمل بحذر</span>";
-
-  document.getElementById("top5").innerHTML=
-    "⬆️ أفضل 5: " +
-    scores.slice(0,5).map(x=>
-      `<span>${x[0]} <span class='score'>(${x[1]})</span></span>`
-    ).join("");
-
-  document.getElementById("reason").innerText=
-    "الترتيب مبني على: التكرار × الترند × الغياب × التثبيت";
-
-  let btns="";
-  all.forEach(i=>{
-    btns+=`
-    <div class="btn ${data.hot[i]?'hot':''}"
-      onclick="add('${i}')"
-      ondblclick="toggleHot('${i}')">
-      ${i}
-    </div>`;
+// رسم الأزرار
+function renderButtons(){
+  let html="";
+  items.forEach(i=>{
+    html += `<div class="btn" onclick="addItem('${i}')">${i}</div>`;
   });
-  document.getElementById("buttons").innerHTML=btns;
+  document.getElementById("buttons").innerHTML = html;
 }
 
+// تحديث شريط آخر 20
+function renderLast20(){
+  const last20 = data.history.slice(-20);
+  document.getElementById("last20").innerText =
+    last20.length ? last20.join(" ") : "(فارغ)";
+}
+
+// حساب النسب
+function renderPercentages(){
+  const total = data.history.length;
+  let text = total ? "" : "لسه مفيش بيانات";
+
+  items.forEach(item=>{
+    const count = data.history.filter(x=>x===item).length;
+    if(count>0){
+      const percent = ((count/total)*100).toFixed(1);
+      text += `${item} : ${percent}%<br>`;
+    }
+  });
+
+  document.getElementById("percentages").innerHTML = text;
+}
+
+// مسح الكل
 function resetAll(){
-  if(confirm("مسح كل البيانات؟")){
-    data={selected:[],hot:{}};
-    save(); render();
+  if(confirm("مسح كل السجل؟")){
+    data.history = [];
+    save();
+    render();
   }
+}
+
+// رسم الكل
+function render(){
+  renderButtons();
+  renderLast20();
+  renderPercentages();
 }
 
 render();
 </script>
+
 </body>
 </html>
