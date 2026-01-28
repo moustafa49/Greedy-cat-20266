@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>😺 Greedy Cat MAX – Ultimate AI</title>
+<title>😺 Greedy Cat MAX – Smart Control</title>
 
 <style>
 body{
@@ -17,7 +17,7 @@ h1{margin:12px 0}
   margin:10px auto;
   padding:14px;
   border-radius:16px;
-  max-width:480px;
+  max-width:560px;
   box-shadow:0 0 14px #000
 }
 .grid{
@@ -44,15 +44,33 @@ h1{margin:12px 0}
   font-size:.6em;
   color:#ff9800;
 }
-.bar{font-size:1.4em;line-height:1.9}
-.percent{line-height:1.7}
-.reco{font-size:1.6em;line-height:2}
-.table{
-  font-size:.95em;
-  text-align:right;
-  line-height:1.7
+.bar span{
+  cursor:pointer;
+  padding:2px 4px;
+  border-radius:6px;
 }
+.bar span:hover{
+  background:#ff5555;
+}
+.bar{font-size:1.4em;line-height:2}
+.reco{font-size:1.4em;line-height:2}
 .small{font-size:.85em;color:#aaa}
+.toggle{
+  padding:6px 12px;
+  margin:4px;
+  border-radius:10px;
+  border:none;
+  background:#333;
+  color:#fff;
+  cursor:pointer;
+}
+.toggle.active{
+  background:#ff9800;
+  color:#000;
+}
+.green{color:#4caf50}
+.red{color:#ff7676}
+.blue{color:#4fc3f7}
 </style>
 </head>
 
@@ -60,32 +78,34 @@ h1{margin:12px 0}
 
 <h1>😺 Greedy Cat MAX</h1>
 
-<!-- أزرار -->
+<!-- الوضع -->
+<div class="card">
+  🔀 وضع التوقع:
+  <br>
+  <button class="toggle active" onclick="setMode('3v2')" id="m32">3 خضار + 2 لحوم</button>
+  <button class="toggle" onclick="setMode('3v1')" id="m31">3 خضار + 1 لحمة</button>
+</div>
+
+<!-- الأزرار -->
 <div class="card">
   <div class="grid" id="buttons"></div>
   <div class="small">
-    ضغطة = تسجيل الدور<br>
-    دبل كليك = HOT 🔥 (مؤشر ذكي)
+    ضغطة = تسجيل دور<br>
+    دبل كليك = HOT 🔥<br>
+    اضغط على عنصر في الشريط = حذف الغلطة ❌
   </div>
 </div>
 
-<!-- شريط -->
+<!-- الشريط -->
 <div class="card">
-  📋 آخر 20 دور:
+  📋 آخر 20 دور (اضغط للحذف):
   <div class="bar" id="last20">(فارغ)</div>
 </div>
 
-<!-- توصية -->
+<!-- التوقع -->
 <div class="card">
-  🔮 التوصية الذكية (5):
+  🔮 التوقع الذكي:
   <div class="reco" id="recommendation">(سجّل لعب)</div>
-  <div class="small">مبنية على التاريخ + الترند + الغياب + HOT</div>
-</div>
-
-<!-- إحصائيات -->
-<div class="card">
-  📊 إحصائيات تفصيلية:
-  <div class="table" id="stats"></div>
 </div>
 
 <div class="card">
@@ -93,105 +113,139 @@ h1{margin:12px 0}
 </div>
 
 <script>
-const items = ["🐔","🐟","🦐","🍗","🥕","🌽","🍅","🌶️"];
+const meats = ["🐔","🐟","🦐","🍗"];
+const veggies = ["🥕","🌽","🍅","🌶️"];
+const items = [...meats, ...veggies];
 
-let data = JSON.parse(localStorage.getItem("gc_full_ai")) || {
+let mode = "3v2";
+
+let data = JSON.parse(localStorage.getItem("gc_delete_ai")) || {
   history: [],
   hot: {}
 };
 
 function save(){
-  localStorage.setItem("gc_full_ai", JSON.stringify(data));
+  localStorage.setItem("gc_delete_ai", JSON.stringify(data));
 }
 
-// تسجيل
+// تغيير الوضع
+function setMode(m){
+  mode = m;
+  document.getElementById("m32").classList.remove("active");
+  document.getElementById("m31").classList.remove("active");
+  document.getElementById(m==="3v2"?"m32":"m31").classList.add("active");
+  render();
+}
+
+// تسجيل دور
 function addItem(item){
   data.history.push(item);
+
+  // تحديث ثقة HOT
+  Object.keys(data.hot).forEach(h=>{
+    if(h === item){
+      data.hot[h] = Math.min(data.hot[h] + 1, 5);
+    } else {
+      data.hot[h] = Math.max(data.hot[h] - 1, 0);
+      if(data.hot[h] === 0) delete data.hot[h];
+    }
+  });
+
   save(); render();
 }
 
 // HOT
 function toggleHot(item){
-  data.hot[item] = !data.hot[item];
+  if(!data.hot[item]) data.hot[item] = 1;
+  else delete data.hot[item];
   save(); render();
+}
+
+// حذف عنصر واحد (غلطة)
+function removeAt(indexFromEnd){
+  const idx = data.history.length - 1 - indexFromEnd;
+  if(idx >= 0){
+    data.history.splice(idx,1);
+    save(); render();
+  }
 }
 
 // أزرار
 function renderButtons(){
   let html="";
   items.forEach(i=>{
-    const hot = data.hot[i];
     html += `
-    <div class="btn ${hot?'hot':''}"
+    <div class="btn ${data.hot[i]?'hot':''}"
       onclick="addItem('${i}')"
       ondblclick="toggleHot('${i}')">
-      ${i}${hot?'<div class="hotTag">🔥</div>':''}
+      ${i}${data.hot[i]?'<div class="hotTag">🔥</div>':''}
     </div>`;
   });
   document.getElementById("buttons").innerHTML = html;
 }
 
-// آخر 20
+// شريط
 function renderLast20(){
-  const last20 = data.history.slice(-20);
-  document.getElementById("last20").innerText =
-    last20.length ? last20.join(" ") : "(فارغ)";
+  const last20 = data.history.slice(-20).reverse();
+  if(!last20.length){
+    document.getElementById("last20").innerText="(فارغ)";
+    return;
+  }
+  let html="";
+  last20.forEach((i,idx)=>{
+    html += `<span onclick="removeAt(${idx})">${i}</span> `;
+  });
+  document.getElementById("last20").innerHTML = html;
 }
 
-// توصية ذكية
+// score
+function score(item){
+  const t = data.history.length;
+  const last20 = data.history.slice(-20);
+  const totalC = data.history.filter(x=>x===item).length;
+  const lastC = last20.filter(x=>x===item).length;
+  const lastIdx = data.history.lastIndexOf(item);
+  const gap = lastIdx === -1 ? t : t-lastIdx;
+
+  let s =
+    (totalC/t)*35 +
+    (lastC/20)*35 +
+    Math.min(gap,20)*2;
+
+  if(data.hot[item]) s += data.hot[item]*2;
+  return {score:s, gap:gap, lastC:lastC};
+}
+
+// التوقع
 function renderRecommendation(){
-  const total = data.history.length;
-  if(total < 5){
-    document.getElementById("recommendation").innerText = "سجّل أدوار أكتر";
+  if(data.history.length < 5){
+    document.getElementById("recommendation").innerText="سجّل أدوار أكتر";
     return;
   }
 
-  const last20 = data.history.slice(-20);
-  let scores = {};
+  const vegNeed = 3;
+  const meatNeed = mode==="3v2" ? 2 : 1;
 
-  items.forEach(item=>{
-    const totalC = data.history.filter(x=>x===item).length;
-    const lastC = last20.filter(x=>x===item).length;
-    const lastIdx = data.history.lastIndexOf(item);
-    const gap = lastIdx === -1 ? total : total - lastIdx;
+  const rankedVeg = veggies.map(v=>({i:v,...score(v)}))
+    .sort((a,b)=>b.score-a.score);
 
-    let score =
-      (totalC/total)*40 +
-      (lastC/20)*40 +
-      Math.min(gap,20);
+  const rankedMeat = meats.map(m=>({i:m,...score(m)}))
+    .sort((a,b)=>b.score-a.score);
 
-    if(data.hot[item]) score += 8;
+  const pickVeg = rankedVeg.slice(0,vegNeed);
+  const pickMeat = rankedMeat.slice(0,meatNeed);
 
-    scores[item] = score;
-  });
+  let html="";
+  function draw(p){
+    if(p.gap>=10) return `<span class="blue">${p.i}</span>`;
+    if(p.lastC>=3) return `<span class="green">${p.i}</span>`;
+    return p.i;
+  }
 
-  const top5 = Object.entries(scores)
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,5)
-    .map(x=>x[0])
-    .join(" ");
+  pickVeg.forEach(p=>html+=draw(p)+" ");
+  pickMeat.forEach(p=>html+=draw(p)+" ");
 
-  document.getElementById("recommendation").innerText = top5;
-}
-
-// جدول الإحصائيات
-function renderStats(){
-  const total = data.history.length;
-  let html = "";
-  items.forEach(item=>{
-    const count = data.history.filter(x=>x===item).length;
-    const lastIdx = data.history.lastIndexOf(item);
-    const lastSeen = lastIdx === -1 ? "—" : (total - lastIdx) + " دور";
-    const gap = lastIdx === -1 ? total : total - lastIdx - 1;
-
-    html += `
-    ${item} |
-    العدد: ${count} |
-    آخر مرة: ${lastSeen} |
-    غايب: ${gap} دور
-    <br>`;
-  });
-  document.getElementById("stats").innerHTML = html;
+  document.getElementById("recommendation").innerHTML = html;
 }
 
 function resetAll(){
@@ -205,7 +259,6 @@ function render(){
   renderButtons();
   renderLast20();
   renderRecommendation();
-  renderStats();
 }
 
 render();
