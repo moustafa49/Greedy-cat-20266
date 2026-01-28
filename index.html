@@ -2,263 +2,196 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>😺 Greedy Cat MAX – Smart Control</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>😺 Greedy Cat MAX</title>
 
 <style>
 body{
-  background:#0f0f0f;color:#fff;
-  font-family:'Cairo',Tahoma,Arial;
-  direction:rtl;text-align:center;margin:0
+  background:#0f0f0f;
+  color:#fff;
+  font-family:Tahoma,Arial;
+  direction:rtl;
+  text-align:center;
 }
-h1{margin:12px 0}
+h1{margin:10px 0}
 .card{
   background:#1a1a1a;
   margin:10px auto;
-  padding:14px;
-  border-radius:16px;
-  max-width:560px;
-  box-shadow:0 0 14px #000
+  padding:12px;
+  border-radius:14px;
+  max-width:420px;
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:10px
+  gap:10px;
 }
-.btn{
-  font-size:2em;
-  padding:12px 0;
-  border-radius:14px;
+.item{
+  font-size:28px;
+  padding:10px;
+  border-radius:12px;
+  background:#222;
   cursor:pointer;
-  background:#161616;
-  border:2px solid #333;
-  position:relative;
 }
-.btn.hot{
-  border-color:#ff9800;
-  box-shadow:0 0 10px #ff980088;
-}
-.hotTag{
-  position:absolute;
-  top:2px;right:4px;
-  font-size:.6em;
-  color:#ff9800;
-}
+.hot{box-shadow:0 0 10px orange}
 .bar span{
+  font-size:26px;
+  margin:3px;
   cursor:pointer;
-  padding:2px 4px;
-  border-radius:6px;
-}
-.bar span:hover{
-  background:#ff5555;
-}
-.bar{font-size:1.4em;line-height:2}
-.reco{font-size:1.4em;line-height:2}
-.small{font-size:.85em;color:#aaa}
-.toggle{
-  padding:6px 12px;
-  margin:4px;
-  border-radius:10px;
-  border:none;
-  background:#333;
-  color:#fff;
-  cursor:pointer;
-}
-.toggle.active{
-  background:#ff9800;
-  color:#000;
 }
 .green{color:#4caf50}
-.red{color:#ff7676}
-.blue{color:#4fc3f7}
+.red{color:#ff5252}
+button{
+  padding:8px 14px;
+  border-radius:10px;
+  border:none;
+  margin:4px;
+  cursor:pointer;
+}
+.active{background:orange;color:#000}
 </style>
 </head>
 
 <body>
 
-<h1>😺 Greedy Cat MAX</h1>
+<h1>Greedy Cat MAX 😺</h1>
 
-<!-- الوضع -->
 <div class="card">
-  🔀 وضع التوقع:
-  <br>
-  <button class="toggle active" onclick="setMode('3v2')" id="m32">3 خضار + 2 لحوم</button>
-  <button class="toggle" onclick="setMode('3v1')" id="m31">3 خضار + 1 لحمة</button>
-</div>
-
-<!-- الأزرار -->
-<div class="card">
-  <div class="grid" id="buttons"></div>
-  <div class="small">
-    ضغطة = تسجيل دور<br>
-    دبل كليك = HOT 🔥<br>
-    اضغط على عنصر في الشريط = حذف الغلطة ❌
-  </div>
-</div>
-
-<!-- الشريط -->
-<div class="card">
-  📋 آخر 20 دور (اضغط للحذف):
-  <div class="bar" id="last20">(فارغ)</div>
-</div>
-
-<!-- التوقع -->
-<div class="card">
-  🔮 التوقع الذكي:
-  <div class="reco" id="recommendation">(سجّل لعب)</div>
+  <div>وضع التوقع</div>
+  <button onclick="setMode('32')" id="m32">3 خضار + 2 لحوم</button>
+  <button onclick="setMode('31')" id="m31">3 خضار + 1 لحمة</button>
+  <button onclick="setMode('21p')" id="m21p" class="active">2 خضار + 1 زيادة</button>
 </div>
 
 <div class="card">
-  <button onclick="resetAll()">مسح الكل 🗑️</button>
+  <div class="grid" id="items"></div>
+  <p>ضغط = تسجيل | ضغط مطوّل = 🔥 HOT</p>
 </div>
+
+<div class="card">
+  <div>📜 آخر 20 دور (اضغط للحذف)</div>
+  <div class="bar" id="bar"></div>
+</div>
+
+<div class="card">
+  <div>📊 الأصناف الغايبة</div>
+  <div id="missing"></div>
+</div>
+
+<div class="card">
+  <div>🔮 التوقع الذكي</div>
+  <div id="rec"></div>
+</div>
+
+<button onclick="reset()">مسح الكل</button>
 
 <script>
-const meats = ["🐔","🐟","🦐","🍗"];
-const veggies = ["🥕","🌽","🍅","🌶️"];
-const items = [...meats, ...veggies];
+const veggies=["🌶️","🍅","🌽","🥕"];
+const meats=["🍗","🦐","🐟","🐔"];
+const items=[...veggies,...meats];
 
-let mode = "3v2";
+let history=[];
+let hot={};
+let mode="21p";
 
-let data = JSON.parse(localStorage.getItem("gc_delete_ai")) || {
-  history: [],
-  hot: {}
-};
+const itemsDiv=document.getElementById("items");
+const barDiv=document.getElementById("bar");
+const missDiv=document.getElementById("missing");
+const recDiv=document.getElementById("rec");
 
-function save(){
-  localStorage.setItem("gc_delete_ai", JSON.stringify(data));
-}
+items.forEach(i=>{
+  const d=document.createElement("div");
+  d.className="item";
+  d.innerText=i;
+  d.onclick=()=>add(i);
+  d.oncontextmenu=(e)=>{e.preventDefault();toggleHot(i)};
+  itemsDiv.appendChild(d);
+});
 
-// تغيير الوضع
-function setMode(m){
-  mode = m;
-  document.getElementById("m32").classList.remove("active");
-  document.getElementById("m31").classList.remove("active");
-  document.getElementById(m==="3v2"?"m32":"m31").classList.add("active");
+function toggleHot(i){
+  hot[i]=!hot[i];
   render();
 }
 
-// تسجيل دور
-function addItem(item){
-  data.history.push(item);
-
-  // تحديث ثقة HOT
-  Object.keys(data.hot).forEach(h=>{
-    if(h === item){
-      data.hot[h] = Math.min(data.hot[h] + 1, 5);
-    } else {
-      data.hot[h] = Math.max(data.hot[h] - 1, 0);
-      if(data.hot[h] === 0) delete data.hot[h];
-    }
-  });
-
-  save(); render();
+function add(i){
+  history.push(i);
+  render();
 }
 
-// HOT
-function toggleHot(item){
-  if(!data.hot[item]) data.hot[item] = 1;
-  else delete data.hot[item];
-  save(); render();
+function remove(idx){
+  history.splice(idx,1);
+  render();
 }
 
-// حذف عنصر واحد (غلطة)
-function removeAt(indexFromEnd){
-  const idx = data.history.length - 1 - indexFromEnd;
-  if(idx >= 0){
-    data.history.splice(idx,1);
-    save(); render();
-  }
+function setMode(m){
+  mode=m;
+  ["m32","m31","m21p"].forEach(x=>document.getElementById(x).classList.remove("active"));
+  if(m==="32")m32.classList.add("active");
+  if(m==="31")m31.classList.add("active");
+  if(m==="21p")m21p.classList.add("active");
+  render();
 }
 
-// أزرار
-function renderButtons(){
-  let html="";
-  items.forEach(i=>{
-    html += `
-    <div class="btn ${data.hot[i]?'hot':''}"
-      onclick="addItem('${i}')"
-      ondblclick="toggleHot('${i}')">
-      ${i}${data.hot[i]?'<div class="hotTag">🔥</div>':''}
-    </div>`;
-  });
-  document.getElementById("buttons").innerHTML = html;
+function score(i){
+  let miss=history.length-history.lastIndexOf(i)-1;
+  let h=hot[i]?3:0;
+  return miss+h;
 }
 
-// شريط
-function renderLast20(){
-  const last20 = data.history.slice(-20).reverse();
-  if(!last20.length){
-    document.getElementById("last20").innerText="(فارغ)";
-    return;
-  }
-  let html="";
-  last20.forEach((i,idx)=>{
-    html += `<span onclick="removeAt(${idx})">${i}</span> `;
-  });
-  document.getElementById("last20").innerHTML = html;
-}
-
-// score
-function score(item){
-  const t = data.history.length;
-  const last20 = data.history.slice(-20);
-  const totalC = data.history.filter(x=>x===item).length;
-  const lastC = last20.filter(x=>x===item).length;
-  const lastIdx = data.history.lastIndexOf(item);
-  const gap = lastIdx === -1 ? t : t-lastIdx;
-
-  let s =
-    (totalC/t)*35 +
-    (lastC/20)*35 +
-    Math.min(gap,20)*2;
-
-  if(data.hot[item]) s += data.hot[item]*2;
-  return {score:s, gap:gap, lastC:lastC};
-}
-
-// التوقع
-function renderRecommendation(){
-  if(data.history.length < 5){
-    document.getElementById("recommendation").innerText="سجّل أدوار أكتر";
-    return;
-  }
-
-  const vegNeed = 3;
-  const meatNeed = mode==="3v2" ? 2 : 1;
-
-  const rankedVeg = veggies.map(v=>({i:v,...score(v)}))
-    .sort((a,b)=>b.score-a.score);
-
-  const rankedMeat = meats.map(m=>({i:m,...score(m)}))
-    .sort((a,b)=>b.score-a.score);
-
-  const pickVeg = rankedVeg.slice(0,vegNeed);
-  const pickMeat = rankedMeat.slice(0,meatNeed);
-
-  let html="";
-  function draw(p){
-    if(p.gap>=10) return `<span class="blue">${p.i}</span>`;
-    if(p.lastC>=3) return `<span class="green">${p.i}</span>`;
-    return p.i;
-  }
-
-  pickVeg.forEach(p=>html+=draw(p)+" ");
-  pickMeat.forEach(p=>html+=draw(p)+" ");
-
-  document.getElementById("recommendation").innerHTML = html;
-}
-
-function resetAll(){
-  if(confirm("مسح كل البيانات؟")){
-    data={history:[],hot:{}};
-    save(); render();
-  }
+function percent(i){
+  let c=history.filter(x=>x===i).length;
+  return history.length?((c/history.length)*100).toFixed(1):"0";
 }
 
 function render(){
-  renderButtons();
-  renderLast20();
-  renderRecommendation();
+  // BAR
+  barDiv.innerHTML="";
+  history.slice(-20).forEach((i,idx)=>{
+    const s=document.createElement("span");
+    s.innerText=i;
+    s.onclick=()=>remove(history.length-20+idx);
+    barDiv.appendChild(s);
+  });
+
+  // MISSING
+  missDiv.innerHTML="";
+  items.forEach(i=>{
+    if(history.includes(i)){
+      let g=history.length-history.lastIndexOf(i)-1;
+      if(g>5) missDiv.innerHTML+=`${i} غايب ${g} دور<br>`;
+    }
+  });
+
+  // RECOMMEND
+  let picks=[];
+  if(mode==="21p"){
+    let v=veggies.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s).slice(0,2);
+    let e=items.filter(i=>!v.find(x=>x.i===i))
+      .map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s)[0];
+    picks=[...v,e];
+  }else{
+    let v=veggies.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s).slice(0,3);
+    let m=meats.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s)
+      .slice(0,mode==="32"?2:1);
+    picks=[...v,...m];
+  }
+
+  recDiv.innerHTML="";
+  picks.forEach(p=>{
+    let c=veggies.includes(p.i)?"green":"red";
+    recDiv.innerHTML+=`<span class="${c}">${p.i} ${percent(p.i)}%</span> `;
+  });
+
+  // HOT UI
+  document.querySelectorAll(".item").forEach(d=>{
+    d.classList.toggle("hot",hot[d.innerText]);
+  });
+}
+
+function reset(){
+  history=[];
+  hot={};
+  render();
 }
 
 render();
