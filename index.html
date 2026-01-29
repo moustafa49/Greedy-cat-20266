@@ -1,252 +1,221 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>😺 Greedy Cat MAX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐱 Greedy Cat MAX</title>
 
 <style>
 body{
   background:#0f0f0f;
   color:#fff;
   font-family:Tahoma,Arial;
+  direction:rtl;
   text-align:center;
   margin:0;
 }
 h1{margin:10px 0}
-.box{
+.card{
   background:#1a1a1a;
-  border-radius:14px;
-  padding:12px;
   margin:10px auto;
-  max-width:440px;
+  padding:12px;
+  border-radius:14px;
+  max-width:420px;
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:10px;
+  gap:8px;
 }
-.item{
-  font-size:26px;
-  padding:10px;
+.btn{
+  background:#2a2a2a;
   border-radius:12px;
-  background:#222;
+  padding:10px 0;
+  font-size:22px;
   cursor:pointer;
   user-select:none;
 }
-.item.hot{outline:2px solid orange}
-
-/* ===== الشريط المرتب ===== */
-.bar{
-  display:flex;
-  flex-direction:row-reverse;   /* الأحدث يمين */
-  gap:6px;
-  overflow-x:auto;
-  padding:6px;
-}
-.round{
-  background:#1f1f1f;
-  padding:4px 6px;
-  border-radius:8px;
-  font-size:15px;
-  display:flex;
-  align-items:center;
-  gap:4px;
-  cursor:pointer;
-  white-space:nowrap;
-}
-.num{
-  font-size:9px;
-  color:#777;
-}
-
-button{
-  padding:8px 12px;
+.btn.hot{outline:2px solid orange}
+.small{font-size:13px;color:#aaa}
+.mode{
+  padding:6px 10px;
   border-radius:10px;
-  border:none;
+  background:#333;
   margin:4px;
   cursor:pointer;
 }
-.active{background:#ffb300;color:#000}
-
-.warn{color:#ff5252;font-weight:bold}
+.mode.active{background:#ff9800;color:#000}
+.bar{
+  display:flex;
+  overflow-x:auto;
+  gap:6px;
+  font-size:22px;
+}
+.bar span{
+  background:#333;
+  padding:6px;
+  border-radius:8px;
+  cursor:pointer;
+}
+.warn{color:#ff5252}
 .ok{color:#4caf50}
-.small{font-size:13px;opacity:.85}
-.green{color:#4caf50}
-.red{color:#ff5252}
+.percent{font-size:14px}
+button{
+  padding:8px 16px;
+  border-radius:10px;
+  border:none;
+  font-size:15px;
+  cursor:pointer;
+}
 </style>
 </head>
 
 <body>
 
-<h1>😺 Greedy Cat MAX</h1>
+<h1>🐱 Greedy Cat MAX</h1>
 
-<div class="box">
-<b>وضع التوقع</b><br>
-<button id="m32" class="active" onclick="setMode('32')">3 خضار + 2 لحوم</button>
-<button id="m31" onclick="setMode('31')">3 خضار + 1 لحمة</button>
-<button id="m21" onclick="setMode('21')">2 خضار + 1 لحمة</button>
-<button id="m33" onclick="setMode('33')">3 خضار + 3 لحوم</button>
+<div class="card">
+  <div>وضع التوقع</div>
+  <div>
+    <span class="mode active" onclick="setMode('3v2')">3 خضار + 2 لحوم</span>
+    <span class="mode" onclick="setMode('3v1')">3 خضار + 1 لحمة</span>
+    <span class="mode" onclick="setMode('2v1')">2 خضار + 1 لحمة</span>
+    <span class="mode" onclick="setMode('3v3')">3 خضار + 3 لحوم</span>
+  </div>
 </div>
 
-<div class="box">
-<b>الأصناف</b>
-<div class="grid" id="items"></div>
-<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT 🔥</div>
+<div class="card">
+  <div class="grid" id="items"></div>
+  <div class="small">ضغط = تسجيل | ضغط مطوّل = HOT 🔥</div>
 </div>
 
-<div class="box">
-<b>آخر 20 دور (الأحدث يمين)</b>
-<div class="bar" id="bar"></div>
+<div class="card">
+  <div>📜 آخر 20 دور (اضغط للحذف)</div>
+  <div class="bar" id="history"></div>
 </div>
 
-<div class="box">
-<b>الأصناف الغايبة</b>
-<div id="missing" class="small"></div>
+<div class="card">
+  <div>📊 الأصناف الغايبة</div>
+  <div id="missing"></div>
 </div>
 
-<div class="box">
-<b>⚠️ تحذير التكرار</b>
-<div id="warning"></div>
-</div>
-
-<div class="box">
-<b>🔮 التوقع + %</b>
-<div id="prediction"></div>
+<div class="card">
+  <div>🧠 التوقع الذكي (%)</div>
+  <div id="predict"></div>
 </div>
 
 <button onclick="resetAll()">مسح الكل</button>
 
 <script>
-const veggies=["🥕","🌽","🍅","🌶️"];
-const meats=["🐔","🐟","🦐","🍗"];
-const all=[...veggies,...meats];
+const veg = ["🌶️","🍅","🌽","🥕"];
+const meat = ["🍗","🦐","🐟","🐔"];
+const all = [...veg,...meat];
 
-let history=[];
-let hot={};
-let mode="32";
+let history = [];
+let hot = {};
+let mistakes = {};
+let mode = "3v2";
 
-const itemsDiv=document.getElementById("items");
-const barDiv=document.getElementById("bar");
-const missingDiv=document.getElementById("missing");
-const warningDiv=document.getElementById("warning");
-const predictionDiv=document.getElementById("prediction");
+const itemsDiv = document.getElementById("items");
 
-/* رسم الأزرار */
 all.forEach(i=>{
   const d=document.createElement("div");
-  d.className="item";
-  d.textContent=i;
-  let t;
-  d.onclick=()=>{ history.push(i); render(); };
-  d.onmousedown=()=>{ t=setTimeout(()=>{ hot[i]=!hot[i]; render(); },600); };
-  d.onmouseup=()=>clearTimeout(t);
+  d.className="btn";
+  d.innerText=i;
+  let press;
+  d.onmousedown=()=>press=setTimeout(()=>{
+    hot[i]=!hot[i];
+    render();
+  },600);
+  d.onmouseup=()=>{
+    clearTimeout(press);
+    add(i);
+  };
   itemsDiv.appendChild(d);
 });
 
-/* أوضاع */
-function setMode(m){
-  mode=m;
-  ["m32","m31","m21","m33"].forEach(id=>document.getElementById(id).classList.remove("active"));
-  document.getElementById("m"+m).classList.add("active");
+function add(i){
+  history.push(i);
   render();
 }
 
-/* منع 3 ورا بعض */
-function blocked(i){
-  const l=history.slice(-2);
-  return l.length===2 && l[0]===i && l[1]===i;
+function remove(idx){
+  history.splice(idx,1);
+  render();
 }
 
-/* تحذير تكرار */
-function repeatWarning(){
-  const last5=history.slice(-5);
-  let w=[];
-  all.forEach(i=>{
-    if(last5.filter(x=>x===i).length>=3)
-      w.push(`${i} تكرار عالي`);
-  });
-  return w;
-}
-
-/* سكّور */
-function score(i){
-  if(blocked(i)) return -999;
-  const last=history.lastIndexOf(i);
-  const miss= last===-1 ? 20 : history.length-last-1;
-  const missW=Math.min(miss,10);
-  const hotW=hot[i]?2:0;
-  return missW+hotW;
-}
-
-function render(){
-  /* إبراز HOT */
-  document.querySelectorAll(".item").forEach(d=>{
-    d.classList.toggle("hot",hot[d.textContent]);
-  });
-
-  /* ===== الشريط المرتب + المرقم ===== */
-  barDiv.innerHTML="";
-  const start=Math.max(0,history.length-20);
-  history.slice(-20).forEach((item,idx)=>{
-    const wrap=document.createElement("div");
-    wrap.className="round";
-    const realIndex=start+idx;
-
-    wrap.onclick=()=>{
-      history.splice(realIndex,1);
-      render();
-    };
-
-    const num=document.createElement("span");
-    num.className="num";
-    num.textContent=realIndex+1;
-
-    const icon=document.createElement("span");
-    icon.textContent=item;
-
-    wrap.appendChild(num);
-    wrap.appendChild(icon);
-    barDiv.appendChild(wrap);
-  });
-
-  /* الغياب */
-  missingDiv.innerHTML="";
-  all.forEach(i=>{
-    const last=history.lastIndexOf(i);
-    if(last!==-1){
-      const gap=history.length-last-1;
-      if(gap>=5) missingDiv.innerHTML+=`${i} غايب ${gap} دور<br>`;
-    }
-  });
-
-  /* تحذير */
-  const w=repeatWarning();
-  warningDiv.innerHTML=w.length
-    ? `<span class="warn">${w.join(" | ")}</span>`
-    : `<span class="ok">لا يوجد خطر واضح</span>`;
-
-  /* التوقع */
-  const ranked=all.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s);
-  let needV=0, needM=0;
-  if(mode==="32"){needV=3;needM=2}
-  if(mode==="31"){needV=3;needM=1}
-  if(mode==="21"){needV=2;needM=1}
-  if(mode==="33"){needV=3;needM=3}
-
-  const pickV=ranked.filter(x=>veggies.includes(x.i)).slice(0,needV);
-  const pickM=ranked.filter(x=>meats.includes(x.i)).slice(0,needM);
-  const picks=[...pickV,...pickM];
-
-  const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
-  predictionDiv.innerHTML=picks.map(p=>{
-    const cls=veggies.includes(p.i)?"green":"red";
-    return `<span class="${cls}">${p.i} ${(p.s/sum*100).toFixed(1)}%</span>`;
-  }).join(" ");
+function setMode(m){
+  mode=m;
+  document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
 }
 
 function resetAll(){
-  history=[];hot={};render();
+  history=[];
+  hot={};
+  mistakes={};
+  render();
+}
+
+function learnMistake(i){
+  mistakes[i]=(mistakes[i]||0)+1;
+}
+
+function score(i){
+  const last=history.lastIndexOf(i);
+  const miss= last==-1 ? 20 : history.length-last-1;
+  const hotW=hot[i]?3:0;
+  const penalty=(mistakes[i]||0)*3;
+  return miss+hotW-penalty;
+}
+
+function predict(){
+  let v=[...veg].sort((a,b)=>score(b)-score(a));
+  let m=[...meat].sort((a,b)=>score(b)-score(a));
+
+  let pick=[];
+  if(mode=="3v2") pick=[...v.slice(0,3),...m.slice(0,2)];
+  if(mode=="3v1") pick=[...v.slice(0,3),m[0]];
+  if(mode=="2v1") pick=[...v.slice(0,2),m[0]];
+  if(mode=="3v3") pick=[...v.slice(0,3),...m.slice(0,3)];
+
+  const total=pick.reduce((s,i)=>s+Math.max(score(i),1),0);
+  return pick.map(i=>`${i} ${(score(i)/total*100).toFixed(1)}%`).join(" ");
+}
+
+function render(){
+  // items
+  document.querySelectorAll(".btn").forEach(b=>{
+    b.classList.toggle("hot",hot[b.innerText]);
+  });
+
+  // history
+  const h=document.getElementById("history");
+  h.innerHTML="";
+  history.slice(-20).forEach((i,idx)=>{
+    const s=document.createElement("span");
+    s.innerText=i;
+    s.onclick=()=>remove(idx);
+    h.appendChild(s);
+  });
+
+  // missing
+  const miss=document.getElementById("missing");
+  miss.innerHTML=all.map(i=>{
+    const last=history.lastIndexOf(i);
+    const m= last==-1?history.length:history.length-last-1;
+    return `${i} غايب ${m} دور`;
+  }).join("<br>");
+
+  // detect repeat mistake
+  if(history.length>=2){
+    const a=history[history.length-1];
+    const b=history[history.length-2];
+    if(a==b) learnMistake(a);
+  }
+
+  document.getElementById("predict").innerHTML=predict();
 }
 
 render();
