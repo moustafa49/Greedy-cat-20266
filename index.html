@@ -2,193 +2,205 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Greedy Cat MAX – Final</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Greedy Cat MAX 😺</title>
+
 <style>
 body{
-  background:#0f0f0f;color:#fff;font-family:Tahoma;
-  direction:rtl;text-align:center;margin:0;padding:10px
+  background:#111;
+  color:#fff;
+  font-family:Tahoma;
+  direction:rtl;
+  text-align:center;
 }
-h1{margin:10px 0}
 .card{
-  background:#1a1a1a;border-radius:16px;
-  padding:12px;margin:10px auto;max-width:420px
+  background:#1c1c1c;
+  margin:10px;
+  padding:12px;
+  border-radius:14px;
 }
-.grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:8px
+.items,.modes{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
 }
-.item{
-  padding:10px;border-radius:12px;
-  background:#222;font-size:26px;
-  cursor:pointer;user-select:none
+.btn{
+  padding:10px;
+  border-radius:10px;
+  background:#2a2a2a;
+  cursor:pointer;
+  font-size:22px;
 }
-.item.hot{outline:3px solid orange}
-.mode button{
-  margin:4px;padding:6px 10px;
-  border-radius:10px;border:0;
-  background:#333;color:#fff
-}
-.mode button.active{background:#ffb300;color:#000}
+.btn.hot{border:2px solid orange}
+.btn.active{background:#ff9800;color:#000}
 .bar{
-  display:flex;overflow-x:auto;gap:6px
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  padding:6px;
 }
 .bar span{
-  background:#333;border-radius:8px;
-  padding:6px 8px;font-size:22px;white-space:nowrap
+  background:#333;
+  padding:6px;
+  border-radius:8px;
+  cursor:pointer;
 }
 .small{font-size:14px;color:#aaa}
-.percent span{margin:0 6px}
-.warn{color:#ffb300}
+.percent span{margin:4px;display:inline-block}
 </style>
 </head>
+
 <body>
 
-<h1>🐱 Greedy Cat MAX</h1>
+<h2>😺 Greedy Cat MAX</h2>
 
-<div class="card mode">
-  <div class="small">وضع التوقع</div>
-  <button onclick="setMode('3v1')">3+1</button>
-  <button onclick="setMode('3v2')">3+2</button>
-  <button onclick="setMode('3v3')">3+3</button>
-  <button onclick="setMode('reserve5')">احتياطي 5</button>
+<div class="card">
+  <b>وضع التوقع</b>
+  <div class="modes">
+    <div class="btn" onclick="setMode('3+1')">3+1</div>
+    <div class="btn" onclick="setMode('3+2')">3+2</div>
+    <div class="btn" onclick="setMode('3+3')">3+3</div>
+    <div class="btn" onclick="setMode('reserve')">احتياطي 5</div>
+    <div class="btn" onclick="setMode('repeat')">🔁 تكرار</div>
+  </div>
 </div>
 
 <div class="card">
-  <div class="grid" id="items"></div>
-  <div class="small">ضغط = تسجيل | ضغط مطوّل = HOT</div>
+  <b>الأصناف</b>
+  <div class="items" id="items"></div>
+  <div class="small">ضغط = تسجيل | ضغط مطول = HOT 🔥</div>
 </div>
 
 <div class="card">
-  <div>آخر 20 دور</div>
-  <div class="bar" id="bar"></div>
+  <b>آخر 20 دور</b>
+  <div class="bar" id="history"></div>
 </div>
 
 <div class="card">
-  <div>⏳ الغايب</div>
+  <b>الغايب ⏳</b>
   <div id="missing"></div>
 </div>
 
-<div class="card percent">
-  <div>🔮 التوقع (%)</div>
-  <div id="percent"></div>
+<div class="card">
+  <b>🔮 التوقع (%)</b>
+  <div class="percent" id="prediction"></div>
 </div>
 
-<button onclick="resetAll()">مسح الكل</button>
+<button class="btn" onclick="resetAll()">مسح الكل</button>
 
 <script>
-const veg=['🌶️','🍅','🌽','🥕'];
-const meat=['🐔','🐟','🐮','🦐'];
+const veg = ["🌶️","🍅","🌽","🥕"];
+const meat = ["🐔","🐟","🐄","🦐"];
+const all = [...veg,...meat];
 
-const all=[...veg,...meat];
-
-const weight={
- '🌶️':1,'🍅':1,'🌽':1,'🥕':1,
- '🐔':0.3,'🐟':0.4,'🐮':0.15,'🦐':0.25
+const weight = {
+  "🌶️":5,"🍅":5,"🌽":5,"🥕":5,
+  "🐔":45,"🐟":25,"🐄":15,"🦐":10
 };
 
 let history=[];
-let hot=new Set();
-let mode='3v1';
+let hot={};
+let mode="3+1";
 
-const itemsDiv=document.getElementById('items');
+const itemsDiv=document.getElementById("items");
 
-all.forEach(x=>{
-  let d=document.createElement('div');
-  d.className='item';
-  d.innerText=x;
-  d.onclick=()=>add(x);
+all.forEach(i=>{
+  const d=document.createElement("div");
+  d.className="btn";
+  d.innerText=i;
+  d.onclick=()=>add(i);
   d.oncontextmenu=e=>{
     e.preventDefault();
-    hot.has(x)?hot.delete(x):hot.add(x);
-    render();
+    hot[i]=!hot[i];
+    d.classList.toggle("hot",hot[i]);
+    calc();
   };
   itemsDiv.appendChild(d);
 });
 
 function setMode(m){
   mode=m;
-  document.querySelectorAll('.mode button')
-    .forEach(b=>b.classList.remove('active'));
-  [...document.querySelectorAll('.mode button')]
-    .find(b=>b.innerText.includes(m.split('v')[0]))?.classList.add('active');
+  document.querySelectorAll('.modes .btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
   calc();
 }
 
-function add(x){
-  history.push(x);
-  if(history.length>200)history.shift();
+function add(i){
+  history.unshift(i);
+  if(history.length>100)history.pop();
   render();
   calc();
 }
 
 function render(){
-  document.querySelectorAll('.item').forEach(i=>{
-    hot.has(i.innerText)?i.classList.add('hot'):i.classList.remove('hot');
+  const h=document.getElementById("history");
+  h.innerHTML="";
+  history.slice(0,20).forEach((i,idx)=>{
+    const s=document.createElement("span");
+    s.innerText=(idx+1)+"-"+i;
+    s.onclick=()=>{
+      history.splice(idx,1);
+      render();calc();
+    };
+    h.appendChild(s);
   });
 
-  const bar=document.getElementById('bar');
-  bar.innerHTML='';
-  history.slice(-20).forEach((x,i)=>{
-    bar.innerHTML+=`<span>${i+1}:${x}</span>`;
+  const miss={};
+  all.forEach(a=>{
+    const last=history.indexOf(a);
+    miss[a]=last===-1?history.length:last;
   });
-
-  let miss='';
-  all.forEach(x=>{
-    let i=history.lastIndexOf(x);
-    let g=i===-1?history.length:history.length-i-1;
-    miss+=`${x} غايب ${g} دور<br>`;
-  });
-  document.getElementById('missing').innerHTML=miss;
-}
-
-function meatSignal(){
-  let last=history.slice(-6);
-  let mc=last.filter(x=>meat.includes(x)).length;
-  let hotMeat=[...hot].some(x=>meat.includes(x));
-  let missMeat=meat.some(x=>{
-    let i=history.lastIndexOf(x);
-    let g=i===-1?history.length:history.length-i-1;
-    return g>=8;
-  });
-  return mc>=2||hotMeat||missMeat;
-}
-
-function pick(arr,n){
-  return [...arr]
-    .sort((a,b)=>(weight[b]+(hot.has(b)?0.3:0))-(weight[a]+(hot.has(a)?0.3:0)))
-    .slice(0,n);
+  document.getElementById("missing").innerHTML=
+    Object.entries(miss)
+    .sort((a,b)=>b[1]-a[1])
+    .map(e=>`${e[0]} غايب ${e[1]} دور`).join("<br>");
 }
 
 function calc(){
-  let res=[];
-  if(mode==='3v1')res=[...pick(veg,3),...pick(meat,1)];
-  if(mode==='3v2')res=[...pick(veg,3),...pick(meat,2)];
-  if(mode==='3v3')res=[...pick(veg,3),...pick(meat,3)];
-  if(mode==='reserve5'){
-    if(meatSignal())res=[...pick(meat,4),...pick(veg,2)];
-    else res=[...pick(veg,4),...pick(meat,2)];
+  const score={};
+  all.forEach(a=>score[a]=0);
+
+  history.forEach((i,idx)=>{
+    score[i]+=1+(idx<5?2:0);
+  });
+
+  Object.keys(hot).forEach(i=>{
+    if(hot[i])score[i]+=3;
+  });
+
+  all.forEach(i=>{
+    score[i]*=weight[i]/10;
+  });
+
+  let pick=[];
+  if(mode==="repeat"){
+    pick=Object.entries(score)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,3);
+  }else{
+    let v=[],m=[];
+    veg.forEach(i=>v.push([i,score[i]]));
+    meat.forEach(i=>m.push([i,score[i]]));
+    v.sort((a,b)=>b[1]-a[1]);
+    m.sort((a,b)=>b[1]-a[1]);
+
+    if(mode==="3+1") pick=[...v.slice(0,3),...m.slice(0,1)];
+    if(mode==="3+2") pick=[...v.slice(0,3),...m.slice(0,2)];
+    if(mode==="3+3") pick=[...v.slice(0,3),...m.slice(0,3)];
+    if(mode==="reserve") pick=[...m.slice(0,4),...v.slice(0,2)];
   }
 
-  let sum=0;
-  let p={};
-  all.forEach(x=>{
-    let v=(weight[x]||0)+(hot.has(x)?0.3:0)+(res.includes(x)?0.2:0);
-    p[x]=v;sum+=v;
-  });
-
-  let out='';
-  Object.keys(p).forEach(x=>{
-    out+=`<span>${x} ${(p[x]/sum*100).toFixed(1)}%</span>`;
-  });
-  document.getElementById('percent').innerHTML=out;
+  const total=pick.reduce((s,a)=>s+a[1],0)||1;
+  document.getElementById("prediction").innerHTML=
+    pick.map(p=>`${p[0]} ${(p[1]/total*100).toFixed(1)}%`).join(" ");
 }
 
 function resetAll(){
-  history=[];hot.clear();
+  history=[];hot={};
+  document.querySelectorAll('.btn').forEach(b=>b.classList.remove('hot'));
   render();calc();
 }
-
-render();calc();
 </script>
+
 </body>
 </html>
