@@ -1,227 +1,210 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>😺 Greedy Cat MAX — Safe Mode</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>😺 Greedy Cat MAX – Safe Predictor</title>
 
 <style>
 body{
   background:#0f0f0f;color:#fff;
-  font-family:Tahoma,Arial;direction:rtl;text-align:center;
+  font-family:Tahoma,Arial;
+  text-align:center;margin:0;padding:10px
 }
 h1{margin:10px 0}
-.card{
-  background:#1a1a1a;margin:10px auto;padding:12px;
-  border-radius:14px;max-width:420px;
+.box{
+  background:#1a1a1a;
+  border-radius:14px;
+  padding:12px;
+  margin:10px auto;
+  max-width:420px
 }
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px
+}
 .item{
-  font-size:26px;padding:10px;border-radius:12px;
-  background:#222;cursor:pointer;user-select:none;
+  font-size:26px;
+  padding:10px;
+  border-radius:12px;
+  background:#222;
+  cursor:pointer
 }
-.hot{box-shadow:0 0 10px #ff9800}
-button{
-  padding:8px 14px;border-radius:10px;border:none;
-  margin:4px;cursor:pointer;
-}
-.active{background:#ffb300;color:#000}
-.small{font-size:13px;color:#bbb}
-
-/* شريط صغير Scroll */
+.hot{outline:2px solid orange}
 .bar{
-  display:flex;gap:6px;overflow-x:auto;padding:6px;
+  display:flex;
+  overflow-x:auto;
+  gap:6px;
+  padding:6px
 }
-.bar::-webkit-scrollbar{height:6px}
-.bar::-webkit-scrollbar-thumb{background:#555;border-radius:10px}
-.round{
-  background:#1f1f1f;padding:4px 6px;border-radius:8px;
-  font-size:15px;display:flex;align-items:center;gap:4px;
-  cursor:pointer;white-space:nowrap;
+.bar span{
+  font-size:22px;
+  cursor:pointer
 }
-.num{font-size:9px;color:#777}
-
-.green{color:#4caf50}
-.red{color:#ff5252}
-.warn{color:#ff9800}
+.warn{color:#ff5252;font-weight:bold}
+.ok{color:#4caf50}
+.small{font-size:13px;opacity:.8}
 </style>
 </head>
 
 <body>
 
-<h1>Greedy Cat MAX 😺</h1>
+<h1>😺 Greedy Cat MAX</h1>
 
-<div class="card">
-  <div>وضع التوقع (تحليل فقط)</div>
-  <button id="m32" onclick="setMode('32')">3 خضار + 2 لحوم</button>
-  <button id="m31" onclick="setMode('31')">3 خضار + 1 لحمة</button>
-  <button id="m21p" onclick="setMode('21p')" class="active">2 خضار + 1 زيادة</button>
+<div class="box">
+<b>الأصناف</b>
+<div class="grid" id="items"></div>
+<div class="small">ضغط = تسجيل | ضغط مطول = HOT 🔥</div>
 </div>
 
-<div class="card">
-  <div class="grid" id="items"></div>
-  <div class="small">ضغط = تسجيل | ضغط مطوّل = 🔥 HOT (إشارة فقط)</div>
-  <button onclick="clearHot()">مسح HOT</button>
+<div class="box">
+<b>آخر 20 دور (اضغط للحذف)</b>
+<div class="bar" id="last20"></div>
 </div>
 
-<div class="card">
-  <div>📜 آخر 20 دور (اسحب ⬅️➡️ | اضغط للحذف)</div>
-  <div class="bar" id="bar"></div>
+<div class="box">
+<b>الأصناف الغائبة</b>
+<div id="missing"></div>
 </div>
 
-<div class="card">
-  <div>📊 الأصناف الغايبة</div>
-  <div id="missing" class="small"></div>
+<div class="box">
+<b>⚠️ تحذير التكرار</b>
+<div id="warning"></div>
 </div>
 
-<div class="card">
-  <div>🔮 تحليل الاحتمالات (%)</div>
-  <div id="alert" class="warn"></div>
-  <div id="rec"></div>
+<div class="box">
+<b>🔮 التوقع الذكي (3 خضار + 3 لحوم)</b>
+<div id="prediction"></div>
+</div>
+
+<div class="box">
+<b>📊 الاحتمالات %</b>
+<div id="percentages"></div>
 </div>
 
 <button onclick="resetAll()">مسح الكل</button>
 
 <script>
-/* البيانات */
 const veggies=["🥕","🌽","🍅","🌶️"];
-const meats=["🍗","🦐","🐟","🐔"];
-const items=[...veggies,...meats];
+const meats=["🐔","🐟","🦐","🍗"];
+const all=[...veggies,...meats];
 
-let history=JSON.parse(localStorage.getItem("history")||"[]");
-let hot=JSON.parse(localStorage.getItem("hot")||"{}");
-let mode=localStorage.getItem("mode")||"21p";
+let history=[];
+let hot={};
 
 const itemsDiv=document.getElementById("items");
-const barDiv=document.getElementById("bar");
-const missDiv=document.getElementById("missing");
-const recDiv=document.getElementById("rec");
-const alertDiv=document.getElementById("alert");
+const last20Div=document.getElementById("last20");
+const missingDiv=document.getElementById("missing");
+const warningDiv=document.getElementById("warning");
+const predictionDiv=document.getElementById("prediction");
+const percDiv=document.getElementById("percentages");
 
-/* رسم الأزرار */
-items.forEach(i=>{
+/* رسم الأصناف */
+all.forEach(i=>{
   const d=document.createElement("div");
   d.className="item";
-  d.innerText=i;
-  d.onclick=()=>add(i);
-  d.oncontextmenu=e=>{
-    e.preventDefault();
-    hot[i]=!hot[i];
-    save(); render();
+  d.textContent=i;
+  let t;
+  d.onclick=()=>{
+    history.push(i);
+    render();
   };
+  d.onmousedown=()=>{
+    t=setTimeout(()=>{
+      hot[i]=!hot[i];
+      render();
+    },600);
+  };
+  d.onmouseup=()=>clearTimeout(t);
   itemsDiv.appendChild(d);
 });
 
-function save(){
-  localStorage.setItem("history",JSON.stringify(history));
-  localStorage.setItem("hot",JSON.stringify(hot));
-  localStorage.setItem("mode",mode);
+/* منع 3 تكرار */
+function blocked(i){
+  const l=history.slice(-2);
+  return l.length===2 && l[0]===i && l[1]===i;
 }
 
-/* إضافة/حذف */
-function add(i){ history.push(i); save(); render(); }
-function removeAt(idx){ history.splice(idx,1); save(); render(); }
-function resetAll(){ history=[]; hot={}; save(); render(); }
-function clearHot(){ hot={}; save(); render(); }
-
-/* وضع */
-function setMode(m){
-  mode=m; save();
-  ["m32","m31","m21p"].forEach(id=>document.getElementById(id).classList.remove("active"));
-  document.getElementById("m"+m).classList.add("active");
-  render();
-}
-
-/* مكافحة الجعفلة */
-function recentPenalty(item){
-  const last3 = history.slice(-3);
-  return last3.filter(x=>x===item).length * 4; // عقوبة قوية
-}
-
-/* سكّور آمن */
-function score(item){
-  const last=history.lastIndexOf(item);
-  const miss = last===-1 ? history.length : (history.length-last-1);
-  const missWeight = Math.min(miss, 10); // سقف للغياب
-  const hotWeight = hot[item] ? 2 : 0;   // HOT ضعيف
-  return missWeight + hotWeight - recentPenalty(item);
-}
-
-/* نسبة */
-function percent(item){
-  const c=history.filter(x=>x===item).length;
-  return history.length?((c/history.length)*100).toFixed(1):"0.0";
-}
-
-/* فريدة (منع التكرار داخل التوقع) */
-function uniquePicks(arr){
-  const used=new Set();
-  return arr.filter(p=>{
-    if(used.has(p.i)) return false;
-    used.add(p.i); return true;
+/* تحذير التكرار */
+function repeatWarning(){
+  const last5=history.slice(-5);
+  let w=[];
+  all.forEach(i=>{
+    if(last5.filter(x=>x===i).length>=3)
+      w.push(`${i} تكرار عالي`);
   });
+  return w;
+}
+
+/* حساب سكّور */
+function score(i){
+  if(blocked(i)) return -999;
+  const last=history.lastIndexOf(i);
+  const miss= last===-1 ? 20 : history.length-last-1;
+  const missW=Math.min(miss,10);
+  const hotW=hot[i]?2:0;
+  return missW+hotW;
 }
 
 function render(){
-  /* إبراز HOT */
-  document.querySelectorAll(".item").forEach(d=>{
-    d.classList.toggle("hot",!!hot[d.innerText]);
+  /* آخر 20 */
+  last20Div.innerHTML="";
+  history.slice(-20).forEach((i,idx)=>{
+    const s=document.createElement("span");
+    s.textContent=i;
+    s.onclick=()=>{
+      history.splice(history.length-20+idx,1);
+      render();
+    };
+    last20Div.appendChild(s);
   });
 
-  /* الشريط */
-  barDiv.innerHTML="";
-  const start=Math.max(0,history.length-20);
-  history.slice(-20).forEach((item,idx)=>{
-    const r=document.createElement("div");
-    r.className="round";
-    r.onclick=()=>removeAt(start+idx);
-    r.innerHTML=`<span class="num">${start+idx+1}</span><span>${item}</span>`;
-    barDiv.appendChild(r);
-  });
-
-  /* الغياب */
-  missDiv.innerHTML="";
-  items.forEach(i=>{
-    if(history.includes(i)){
-      const g=history.length-history.lastIndexOf(i)-1;
-      if(g>=5) missDiv.innerHTML+=`${i} غايب ${g} دور<br>`;
-    }else if(history.length){
-      missDiv.innerHTML+=`${i} لم يظهر بعد (${history.length})<br>`;
+  /* غياب */
+  missingDiv.innerHTML="";
+  all.forEach(i=>{
+    const last=history.lastIndexOf(i);
+    if(last!==-1){
+      const gap=history.length-last-1;
+      if(gap>=5)
+        missingDiv.innerHTML+=`${i} غايب ${gap} دور<br>`;
     }
   });
 
   /* تحذير */
-  alertDiv.innerText="";
-  items.forEach(i=>{
-    if(history.slice(-3).filter(x=>x===i).length>=2){
-      alertDiv.innerText="⚠️ تحذير: تكرار قريب (جعفلة)";
-    }
-  });
+  const w=repeatWarning();
+  warningDiv.innerHTML=w.length
+   ? `<span class="warn">${w.join(" | ")}</span>`
+   : `<span class="ok">لا يوجد خطر واضح</span>`;
 
-  /* تحليل (بدون فرض لعب) */
-  let picks=[];
-  if(mode==="21p"){
-    const v=veggies.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s).slice(0,2);
-    const e=items.filter(i=>!v.find(x=>x.i===i))
-      .map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s)[0];
-    picks=[...v,e];
-  }else{
-    const v=veggies.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s).slice(0,3);
-    const m=meats.map(i=>({i,s:score(i)}))
-      .sort((a,b)=>b.s-a.s).slice(0,mode==="32"?2:1);
-    picks=[...v,...m];
-  }
-  picks=uniquePicks(picks);
+  /* توقع */
+  let scored=all.map(i=>({i,s:score(i)}))
+               .sort((a,b)=>b.s-a.s);
 
-  recDiv.innerHTML="";
+  const pickVeg=scored.filter(x=>veggies.includes(x.i)).slice(0,3);
+  const pickMeat=scored.filter(x=>meats.includes(x.i)).slice(0,3);
+  const picks=[...pickVeg,...pickMeat];
+
+  predictionDiv.textContent=picks.map(x=>x.i).join(" ");
+
+  /* نسب */
+  const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
+  percDiv.innerHTML="";
   picks.forEach(p=>{
-    const cls=veggies.includes(p.i)?"green":"red";
-    recDiv.innerHTML+=`<span class="${cls}">${p.i} ${percent(p.i)}%</span> `;
+    percDiv.innerHTML+=`${p.i} ${(p.s/sum*100).toFixed(1)}% &nbsp; `;
   });
+
+  /* تحديث HOT شكل */
+  document.querySelectorAll(".item").forEach(d=>{
+    d.classList.toggle("hot",hot[d.textContent]);
+  });
+}
+
+function resetAll(){
+  history=[];hot={};render();
 }
 
 render();
 </script>
-
 </body>
 </html>
