@@ -3,48 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>😺 Greedy Cat MAX – Safe Predictor</title>
+<title>😺 Greedy Cat MAX</title>
 
 <style>
-body{
-  background:#0f0f0f;color:#fff;
-  font-family:Tahoma,Arial;
-  text-align:center;margin:0;padding:10px
-}
+body{background:#0f0f0f;color:#fff;font-family:Tahoma,Arial;text-align:center;margin:0}
 h1{margin:10px 0}
-.box{
-  background:#1a1a1a;
-  border-radius:14px;
-  padding:12px;
-  margin:10px auto;
-  max-width:420px
-}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:10px
-}
-.item{
-  font-size:26px;
-  padding:10px;
-  border-radius:12px;
-  background:#222;
-  cursor:pointer
-}
-.hot{outline:2px solid orange}
-.bar{
-  display:flex;
-  overflow-x:auto;
-  gap:6px;
-  padding:6px
-}
-.bar span{
-  font-size:22px;
-  cursor:pointer
-}
+.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:430px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer}
+.item.hot{outline:2px solid orange}
+.bar{display:flex;gap:6px;overflow-x:auto;padding:6px}
+.bar span{font-size:20px;cursor:pointer}
+button{padding:8px 12px;border-radius:10px;border:none;margin:4px;cursor:pointer}
+.active{background:#ffb300;color:#000}
 .warn{color:#ff5252;font-weight:bold}
 .ok{color:#4caf50}
-.small{font-size:13px;opacity:.8}
+.small{font-size:13px;opacity:.85}
+.green{color:#4caf50}
+.red{color:#ff5252}
 </style>
 </head>
 
@@ -53,9 +29,17 @@ h1{margin:10px 0}
 <h1>😺 Greedy Cat MAX</h1>
 
 <div class="box">
+<b>وضع التوقع</b><br>
+<button id="m32" onclick="setMode('32')" class="active">3 خضار + 2 لحوم</button>
+<button id="m31" onclick="setMode('31')">3 خضار + 1 لحمة</button>
+<button id="m21" onclick="setMode('21')">2 خضار + 1 لحمة</button>
+<button id="m33" onclick="setMode('33')">3 خضار + 3 لحوم</button>
+</div>
+
+<div class="box">
 <b>الأصناف</b>
 <div class="grid" id="items"></div>
-<div class="small">ضغط = تسجيل | ضغط مطول = HOT 🔥</div>
+<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT 🔥</div>
 </div>
 
 <div class="box">
@@ -64,8 +48,8 @@ h1{margin:10px 0}
 </div>
 
 <div class="box">
-<b>الأصناف الغائبة</b>
-<div id="missing"></div>
+<b>الأصناف الغايبة</b>
+<div id="missing" class="small"></div>
 </div>
 
 <div class="box">
@@ -74,13 +58,8 @@ h1{margin:10px 0}
 </div>
 
 <div class="box">
-<b>🔮 التوقع الذكي (3 خضار + 3 لحوم)</b>
+<b>🔮 التوقع + %</b>
 <div id="prediction"></div>
-</div>
-
-<div class="box">
-<b>📊 الاحتمالات %</b>
-<div id="percentages"></div>
 </div>
 
 <button onclick="resetAll()">مسح الكل</button>
@@ -92,41 +71,41 @@ const all=[...veggies,...meats];
 
 let history=[];
 let hot={};
+let mode="32";
 
 const itemsDiv=document.getElementById("items");
 const last20Div=document.getElementById("last20");
 const missingDiv=document.getElementById("missing");
 const warningDiv=document.getElementById("warning");
 const predictionDiv=document.getElementById("prediction");
-const percDiv=document.getElementById("percentages");
 
-/* رسم الأصناف */
+/* رسم الأزرار */
 all.forEach(i=>{
   const d=document.createElement("div");
   d.className="item";
   d.textContent=i;
   let t;
-  d.onclick=()=>{
-    history.push(i);
-    render();
-  };
-  d.onmousedown=()=>{
-    t=setTimeout(()=>{
-      hot[i]=!hot[i];
-      render();
-    },600);
-  };
+  d.onclick=()=>{history.push(i);render()};
+  d.onmousedown=()=>{t=setTimeout(()=>{hot[i]=!hot[i];render()},600)};
   d.onmouseup=()=>clearTimeout(t);
   itemsDiv.appendChild(d);
 });
 
-/* منع 3 تكرار */
+/* أوضاع */
+function setMode(m){
+  mode=m;
+  ["m32","m31","m21","m33"].forEach(id=>document.getElementById(id).classList.remove("active"));
+  document.getElementById("m"+m).classList.add("active");
+  render();
+}
+
+/* منع 3 ورا بعض */
 function blocked(i){
   const l=history.slice(-2);
   return l.length===2 && l[0]===i && l[1]===i;
 }
 
-/* تحذير التكرار */
+/* تحذير تكرار */
 function repeatWarning(){
   const last5=history.slice(-5);
   let w=[];
@@ -137,7 +116,7 @@ function repeatWarning(){
   return w;
 }
 
-/* حساب سكّور */
+/* سكّور */
 function score(i){
   if(blocked(i)) return -999;
   const last=history.lastIndexOf(i);
@@ -148,7 +127,7 @@ function score(i){
 }
 
 function render(){
-  /* آخر 20 */
+  /* الشريط */
   last20Div.innerHTML="";
   history.slice(-20).forEach((i,idx)=>{
     const s=document.createElement("span");
@@ -160,41 +139,41 @@ function render(){
     last20Div.appendChild(s);
   });
 
-  /* غياب */
+  /* الغياب */
   missingDiv.innerHTML="";
   all.forEach(i=>{
     const last=history.lastIndexOf(i);
     if(last!==-1){
       const gap=history.length-last-1;
-      if(gap>=5)
-        missingDiv.innerHTML+=`${i} غايب ${gap} دور<br>`;
+      if(gap>=5) missingDiv.innerHTML+=`${i} غايب ${gap} دور<br>`;
     }
   });
 
   /* تحذير */
   const w=repeatWarning();
   warningDiv.innerHTML=w.length
-   ? `<span class="warn">${w.join(" | ")}</span>`
-   : `<span class="ok">لا يوجد خطر واضح</span>`;
+    ? `<span class="warn">${w.join(" | ")}</span>`
+    : `<span class="ok">لا يوجد خطر واضح</span>`;
 
-  /* توقع */
-  let scored=all.map(i=>({i,s:score(i)}))
-               .sort((a,b)=>b.s-a.s);
+  /* التوقع */
+  const ranked=all.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s);
+  let needV=0, needM=0;
+  if(mode==="32"){needV=3;needM=2}
+  if(mode==="31"){needV=3;needM=1}
+  if(mode==="21"){needV=2;needM=1}
+  if(mode==="33"){needV=3;needM=3}
 
-  const pickVeg=scored.filter(x=>veggies.includes(x.i)).slice(0,3);
-  const pickMeat=scored.filter(x=>meats.includes(x.i)).slice(0,3);
-  const picks=[...pickVeg,...pickMeat];
+  const pickV=ranked.filter(x=>veggies.includes(x.i)).slice(0,needV);
+  const pickM=ranked.filter(x=>meats.includes(x.i)).slice(0,needM);
+  const picks=[...pickV,...pickM];
 
-  predictionDiv.textContent=picks.map(x=>x.i).join(" ");
-
-  /* نسب */
   const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
-  percDiv.innerHTML="";
-  picks.forEach(p=>{
-    percDiv.innerHTML+=`${p.i} ${(p.s/sum*100).toFixed(1)}% &nbsp; `;
-  });
+  predictionDiv.innerHTML=picks.map(p=>{
+    const cls=veggies.includes(p.i)?"green":"red";
+    return `<span class="${cls}">${p.i} ${(p.s/sum*100).toFixed(1)}%</span>`;
+  }).join(" ");
 
-  /* تحديث HOT شكل */
+  /* HOT UI */
   document.querySelectorAll(".item").forEach(d=>{
     d.classList.toggle("hot",hot[d.textContent]);
   });
@@ -206,5 +185,6 @@ function resetAll(){
 
 render();
 </script>
+
 </body>
 </html>
