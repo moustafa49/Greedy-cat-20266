@@ -3,247 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🐱 Greedy Cat MAX</title>
+<title>🥕 Greedy Cat – Veggie First + Repeat</title>
 
 <style>
-body{
-  background:#0f0f0f;color:#fff;
-  font-family:Tahoma,Arial;text-align:center;margin:0
-}
+body{background:#0f0f0f;color:#fff;font-family:Tahoma,Arial;text-align:center;margin:0}
 h1{margin:10px 0}
-.box{
-  background:#1a1a1a;border-radius:14px;
-  padding:12px;margin:10px auto;max-width:440px
-}
-.grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px
-}
-.item{
-  font-size:26px;padding:10px;border-radius:12px;
-  background:#222;cursor:pointer;user-select:none
-}
+.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:440px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer;user-select:none}
 .item.hot{outline:2px solid orange}
-
-/* الشريط */
-.bar{
-  display:flex;
-  flex-direction:row-reverse; /* الأحدث يمين */
-  gap:6px;
-  overflow-x:auto;
-  padding:6px;
-}
-.round{
-  background:#333;
-  padding:4px 6px;
-  border-radius:8px;
-  font-size:16px;
-  display:flex;
-  align-items:center;
-  gap:4px;
-  cursor:pointer;
-}
-.num{
-  font-size:10px;
-  color:#aaa;
-}
-
-.mode{
-  padding:6px 10px;border-radius:10px;
-  background:#333;margin:4px;cursor:pointer
-}
-.mode.active{background:#ff9800;color:#000}
-
-.warn{color:#ff5252;font-weight:bold}
-.ok{color:#4caf50}
+.bar{display:flex;flex-direction:row-reverse;gap:6px;overflow-x:auto;padding:6px}
+.round{background:#333;padding:4px 6px;border-radius:8px;font-size:16px;display:flex;gap:4px;cursor:pointer}
+.num{font-size:10px;color:#aaa}
 .green{color:#4caf50}
 .red{color:#ff5252}
+.orange{color:#ff9800}
 .small{font-size:13px;color:#bbb}
+.percent{font-size:13px}
 </style>
 </head>
 
 <body>
 
-<h1>🐱 Greedy Cat MAX</h1>
-
-<div class="box">
-<b>وضع التوقع</b><br>
-<span class="mode active" onclick="setMode('32')">3 خضار + 2 لحوم</span>
-<span class="mode" onclick="setMode('31')">3 خضار + 1 لحمة</span>
-<span class="mode" onclick="setMode('21')">2 خضار + 1 لحمة</span>
-<span class="mode" onclick="setMode('33')">3 خضار + 3 لحوم</span>
-</div>
+<h1>🥕 Greedy Cat – Veggie First</h1>
 
 <div class="box">
 <b>الأصناف</b>
 <div class="grid" id="items"></div>
-<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT 🔥</div>
+<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT</div>
 </div>
 
 <div class="box">
-<b>آخر 20 دور (مرقّم)</b>
+<b>آخر 20 دور</b>
 <div class="bar" id="bar"></div>
 </div>
 
 <div class="box">
-<b>الأصناف الغايبة</b>
-<div id="missing" class="small"></div>
-</div>
-
-<div class="box">
-<b>⚠️ تحذير التكرار</b>
-<div id="warning"></div>
-</div>
-
-<div class="box">
-<b>🔮 التوقع + %</b>
+<b>🔮 التوقع (مع التكرار)</b>
 <div id="prediction"></div>
+<div id="note" class="small"></div>
 </div>
-
-<button onclick="resetAll()">مسح الكل</button>
 
 <script>
-const veggies=["🥕","🌽","🍅","🌶️"];
-const meats=["🐔","🐟","🦐","🍗"];
-const all=[...veggies,...meats];
+/* ===== البيانات ===== */
+const veggies = ["🥕","🌽","🍅","🌶️"];
+const meats = [
+  { i:"🦐", mult:10 },
+  { i:"🐄", mult:15 },
+  { i:"🐟", mult:25 },
+  { i:"🐔", mult:45 }
+];
+const all = [...veggies, ...meats.map(m=>m.i)];
 
-let history=[];
-let hot={};
-let mistakes={};
-let mode="32";
+let history = [];
+let hot = {};
 
-const itemsDiv=document.getElementById("items");
-const barDiv=document.getElementById("bar");
-const missingDiv=document.getElementById("missing");
-const warningDiv=document.getElementById("warning");
-const predictionDiv=document.getElementById("prediction");
+/* ===== DOM ===== */
+const itemsDiv = document.getElementById("items");
+const barDiv = document.getElementById("bar");
+const predDiv = document.getElementById("prediction");
+const noteDiv = document.getElementById("note");
 
-/* رسم الأصناف */
+/* ===== رسم الأزرار ===== */
 all.forEach(i=>{
   const d=document.createElement("div");
   d.className="item";
   d.textContent=i;
   let t;
-  d.onclick=()=>{history.push(i);render()};
-  d.onmousedown=()=>{t=setTimeout(()=>{hot[i]=!hot[i];render()},600)};
+  d.onclick=()=>{ history.push(i); render(); };
+  d.onmousedown=()=>{ t=setTimeout(()=>{ hot[i]=!hot[i]; render(); },600); };
   d.onmouseup=()=>clearTimeout(t);
   itemsDiv.appendChild(d);
 });
 
-/* تغيير الوضع */
-function setMode(m){
-  mode=m;
-  document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));
-  event.target.classList.add("active");
-  render();
+/* ===== حالة التكرار ===== */
+function repeatStatus(i){
+  const last3 = history.slice(-3);
+  const c = last3.filter(x=>x===i).length;
+  if(c>=3) return {level:"block", text:"⛔ جعفلة"};
+  if(c===2) return {level:"high", text:"⚠️ تكرار عالي"};
+  if(c===1) return {level:"maybe", text:"🔁 ممكن يتكرر"};
+  return {level:"safe", text:""};
 }
 
-/* منع 3 ورا بعض */
-function blocked(i){
-  const l=history.slice(-3);
-  return l.length===3 && l.every(x=>x===i);
+/* ===== سكّور الخضار ===== */
+function vegScore(i){
+  const last = history.lastIndexOf(i);
+  const miss = last===-1 ? 20 : history.length-last-1;
+  const rs = repeatStatus(i);
+  let repeatAdj = 0;
+  if(rs.level==="maybe") repeatAdj = 2;     // نشجّع التكرار الطبيعي
+  if(rs.level==="high") repeatAdj = -2;     // نهدي
+  if(rs.level==="block") return -999;       // نمنع
+  return Math.min(miss,14) + repeatAdj + (hot[i]?2:0);
 }
 
-/* تحذير */
-function repeatWarning(){
-  const last5=history.slice(-5);
-  let w=[];
-  all.forEach(i=>{
-    if(last5.filter(x=>x===i).length>=3) w.push(`${i} تكرار عالي`);
-  });
-  return w;
+/* ===== سكّور اللحوم (ضعيف + تكرار محدود) ===== */
+function meatScore(obj){
+  const i=obj.i;
+  const last = history.lastIndexOf(i);
+  const miss = last===-1 ? 8 : history.length-last-1;
+  const rs = repeatStatus(i);
+  if(rs.level==="block") return -999;
+  const rarityPenalty = obj.mult / 4;
+  let repeatAdj = (rs.level==="maybe") ? -1 : (rs.level==="high" ? -4 : 0);
+  return Math.min(miss,6) - rarityPenalty + repeatAdj;
 }
 
-/* تعلم من الأخطاء */
-function learnMistake(i){
-  mistakes[i]=(mistakes[i]||0)+1;
-}
-
-/* سكّور */
-function score(i){
-  if(blocked(i)) return -999;
-  const last=history.lastIndexOf(i);
-  const miss= last===-1 ? 20 : history.length-last-1;
-  const missW=Math.min(miss,10);
-  const hotW=hot[i]?3:0;
-  const mistakePenalty=(mistakes[i]||0)*3;
-  return missW+hotW-mistakePenalty;
-}
-
+/* ===== رسم الصفحة ===== */
 function render(){
-  /* إبراز HOT */
-  document.querySelectorAll(".item").forEach(d=>{
-    d.classList.toggle("hot",hot[d.textContent]);
-  });
-
-  /* الشريط المرقّم */
+  /* الشريط */
   barDiv.innerHTML="";
   const start=Math.max(0,history.length-20);
-  history.slice(-20).forEach((item,idx)=>{
-    const wrap=document.createElement("div");
-    wrap.className="round";
-    const realIndex=start+idx;
-
-    wrap.onclick=()=>{
-      history.splice(realIndex,1);
-      render();
-    };
-
-    const num=document.createElement("span");
-    num.className="num";
-    num.textContent=realIndex+1;
-
-    const icon=document.createElement("span");
-    icon.textContent=item;
-
-    wrap.appendChild(num);
-    wrap.appendChild(icon);
-    barDiv.appendChild(wrap);
+  history.slice(-20).forEach((it,idx)=>{
+    const r=document.createElement("div");
+    r.className="round";
+    r.onclick=()=>{ history.splice(start+idx,1); render(); };
+    r.innerHTML=`<span class="num">${start+idx+1}</span><span>${it}</span>`;
+    barDiv.appendChild(r);
   });
-
-  /* الغياب */
-  missingDiv.innerHTML="";
-  all.forEach(i=>{
-    const last=history.lastIndexOf(i);
-    if(last!==-1){
-      const gap=history.length-last-1;
-      if(gap>=5) missingDiv.innerHTML+=`${i} غايب ${gap} دور<br>`;
-    }
-  });
-
-  /* تحذير */
-  const w=repeatWarning();
-  warningDiv.innerHTML=w.length
-    ? `<span class="warn">${w.join(" | ")}</span>`
-    : `<span class="ok">لا يوجد خطر واضح</span>`;
-
-  /* تسجيل خطأ لو تكرر */
-  if(history.length>=2){
-    const a=history[history.length-1];
-    const b=history[history.length-2];
-    if(a===b) learnMistake(a);
-  }
 
   /* التوقع */
-  const ranked=all.map(i=>({i,s:score(i)})).sort((a,b)=>b.s-a.s);
-  let needV=0,needM=0;
-  if(mode==="32"){needV=3;needM=2}
-  if(mode==="31"){needV=3;needM=1}
-  if(mode==="21"){needV=2;needM=1}
-  if(mode==="33"){needV=3;needM=3}
+  const vegRank = veggies.map(i=>({i,s:vegScore(i),rs:repeatStatus(i)}))
+                         .sort((a,b)=>b.s-a.s);
+  const meatRank = meats.map(m=>({i:m.i,s:meatScore(m),rs:repeatStatus(m.i)}))
+                         .sort((a,b)=>b.s-a.s);
 
-  const pickV=ranked.filter(x=>veggies.includes(x.i)).slice(0,needV);
-  const pickM=ranked.filter(x=>meats.includes(x.i)).slice(0,needM);
-  const picks=[...pickV,...pickM];
+  const picks = [...vegRank.slice(0,3), ...meatRank.slice(0,2)];
+  const sum = picks.reduce((a,b)=>a+Math.max(b.s,0),0) || 1;
 
-  const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
-  predictionDiv.innerHTML=picks.map(p=>{
-    const cls=veggies.includes(p.i)?"green":"red";
-    return `<span class="${cls}">${p.i} ${(p.s/sum*100).toFixed(1)}%</span>`;
+  predDiv.innerHTML = picks.map(p=>{
+    const isVeg = veggies.includes(p.i);
+    const cls = isVeg ? "green" : "red";
+    const pct = ((Math.max(p.s,0)/sum)*100).toFixed(1);
+    const tag =
+      p.rs.level==="maybe" ? `<span class="orange">🔁</span>` :
+      p.rs.level==="high" ? `<span class="orange">⚠️</span>` : "";
+    return `<span class="${cls}">${p.i} ${tag} <span class="percent">${pct}%</span></span>`;
   }).join(" ");
-}
 
-function resetAll(){
-  history=[];hot={};mistakes={};render();
+  noteDiv.innerHTML =
+    "🔁 = ممكن يتكرر &nbsp;|&nbsp; ⚠️ = تكرار عالي &nbsp;|&nbsp; ⛔ = جعفلة (ممنوع)";
+
+  /* HOT UI */
+  document.querySelectorAll(".item").forEach(d=>{
+    d.classList.toggle("hot", hot[d.textContent]);
+  });
 }
 
 render();
