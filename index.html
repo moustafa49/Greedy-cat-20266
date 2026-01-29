@@ -3,42 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Greedy Cat MAX – Smart System</title>
+<title>Greedy Cat MAX – Smart</title>
 
 <style>
-body{
-  background:#0f0f0f;color:#fff;font-family:Tahoma;text-align:center;margin:0
-}
+body{background:#0f0f0f;color:#fff;font-family:Tahoma;text-align:center;margin:0}
 h1{margin:10px}
-.box{
-  background:#1a1a1a;border-radius:14px;
-  padding:12px;margin:10px auto;max-width:460px
-}
-.grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:8px
-}
-.item{
-  font-size:26px;padding:10px;border-radius:12px;
-  background:#222;cursor:pointer;user-select:none
-}
+.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:480px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer;user-select:none}
 .item.hot{outline:3px solid orange}
-.modes{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:6px
-}
-.mode{
-  padding:6px;border-radius:10px;background:#333;cursor:pointer
-}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mode{padding:6px;border-radius:10px;background:#333;cursor:pointer}
 .mode.active{background:#ff9800;color:#000}
-.bar{
-  display:flex;gap:6px;overflow-x:auto;padding:6px
-}
-.bar span{
-  background:#333;padding:4px 8px;border-radius:8px;cursor:pointer
-}
+.bar{display:flex;gap:6px;overflow-x:auto;padding:6px}
+.bar span{background:#333;padding:4px 8px;border-radius:8px;cursor:pointer}
 .small{font-size:13px;color:#bbb}
 .green{color:#4caf50}
 .red{color:#ff5252}
 .orange{color:#ff9800}
+.pred span{margin:4px;display:inline-block}
 </style>
 </head>
 
@@ -74,8 +57,8 @@ h1{margin:10px}
 </div>
 
 <div class="box">
-<b>🔮 التوقع</b>
-<div id="prediction"></div>
+<b>🔮 التوقع (%)</b>
+<div id="prediction" class="pred"></div>
 </div>
 
 <script>
@@ -129,52 +112,45 @@ function recentCount(i){
 
 function smartScore(i){
   let s=0;
-  s += Math.min(lastGap(i),12);          // الغياب
-  s += recentCount(i)*2;                 // تكرار طبيعي
-  if(hot.has(i)) s+=2;                   // HOT
-  s -= weight[i]/10;                     // وزن الضرب
-  return s;
+  s += Math.min(lastGap(i),12);     // الغياب
+  s += recentCount(i)*2;            // تكرار طبيعي
+  if(hot.has(i)) s+=2;              // HOT
+  s -= weight[i]/10;                // وزن الضرب
+  return Math.max(s,1);              // أقل قيمة 1
 }
 
 /* ===== بناء التوقع ===== */
 function buildPrediction(){
   let picks=[];
-
   if(mode==="repeat"){
     picks = all
       .sort((a,b)=>recentCount(b)-recentCount(a))
       .slice(0,3);
   }
-
   if(mode==="confuse"){
-    // وضع جعفلة: 4 اختيارات "ممكن تيجي" بدون اندفاع
     picks = all
-      .filter(i=>recentCount(i)<=2)        // مش محروق
+      .filter(i=>recentCount(i)<=2)
       .sort((a,b)=>smartScore(b)-smartScore(a))
       .slice(0,4);
   }
-
   if(mode==="3+1"){
     picks=[
       ...veg.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,3),
       ...meat.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,1)
     ];
   }
-
   if(mode==="3+2"){
     picks=[
       ...veg.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,3),
       ...meat.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,2)
     ];
   }
-
   if(mode==="3+3"){
     picks=[
       ...veg.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,3),
       ...meat.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,3)
     ];
   }
-
   if(mode==="reserve"){
     const meatSignal = meat.some(m=>recentCount(m)>=2 || hot.has(m));
     picks = meatSignal
@@ -183,7 +159,6 @@ function buildPrediction(){
       : [...veg.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,4),
          ...meat.sort((a,b)=>smartScore(b)-smartScore(a)).slice(0,2)];
   }
-
   return picks;
 }
 
@@ -203,13 +178,16 @@ function render(){
   document.getElementById("missing").innerHTML=
     all.map(i=>`${i} ${lastGap(i)}`).join(" | ");
 
-  // التوقع
+  // التوقع + %
   const picks=buildPrediction();
+  const total=picks.reduce((a,i)=>a+smartScore(i),0);
+
   document.getElementById("prediction").innerHTML=
     picks.map(i=>{
+      const pct=((smartScore(i)/total)*100).toFixed(1);
       const cls=veg.includes(i)?"green":"red";
       const tag=recentCount(i)>0?" 🔁":"";
-      return `<span class="${cls}">${i}${tag}</span>`;
+      return `<span class="${cls}">${i}${tag} <b>${pct}%</b></span>`;
     }).join(" ");
 
   // HOT UI
