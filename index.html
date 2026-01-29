@@ -3,19 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🥕 Greedy Cat – Smart Veg System</title>
+<title>🥕 Greedy Cat – Smart Veg</title>
 
 <style>
-body{background:#0f0f0f;color:#fff;font-family:Tahoma;text-align:center;margin:0}
+body{
+  background:#0f0f0f;color:#fff;
+  font-family:Tahoma,Arial;text-align:center;margin:0
+}
 h1{margin:10px}
-.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:440px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer}
+.box{
+  background:#1a1a1a;border-radius:14px;
+  padding:12px;margin:10px auto;max-width:440px
+}
+.grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px
+}
+.item{
+  font-size:26px;padding:10px;border-radius:12px;
+  background:#222;cursor:pointer;user-select:none
+}
 .item.hot{outline:2px solid orange}
-.bar{display:flex;flex-direction:row-reverse;gap:6px;overflow-x:auto;padding:6px}
-.round{background:#333;padding:4px 6px;border-radius:8px;display:flex;gap:4px;cursor:pointer}
+.bar{
+  display:flex;flex-direction:row-reverse;
+  gap:6px;overflow-x:auto;padding:6px
+}
+.round{
+  background:#333;padding:4px 6px;
+  border-radius:8px;font-size:16px;
+  display:flex;gap:4px;cursor:pointer
+}
 .num{font-size:10px;color:#aaa}
-.mode{padding:6px 10px;border-radius:10px;background:#333;margin:4px;cursor:pointer}
+.mode{
+  padding:6px 10px;border-radius:10px;
+  background:#333;margin:4px;cursor:pointer
+}
 .mode.active{background:#ff9800;color:#000}
 .green{color:#4caf50}
 .red{color:#ff5252}
@@ -48,6 +69,11 @@ h1{margin:10px}
 </div>
 
 <div class="box">
+<b>⏳ الغايب (أرقام فقط)</b>
+<div id="missing" class="small"></div>
+</div>
+
+<div class="box">
 <b>🔮 التوقع</b>
 <div id="prediction"></div>
 <div id="note" class="small"></div>
@@ -67,6 +93,7 @@ let history=[], hot={}, mode=1;
 
 const itemsDiv=document.getElementById("items");
 const barDiv=document.getElementById("bar");
+const missingDiv=document.getElementById("missing");
 const predDiv=document.getElementById("prediction");
 const noteDiv=document.getElementById("note");
 
@@ -101,15 +128,15 @@ function repeatStatus(i){
 /* سكورات */
 function vegScore(i){
  if(repeatStatus(i)=="block") return -999;
- let miss=history.lastIndexOf(i);
- miss=miss==-1?20:history.length-miss-1;
+ let last=history.lastIndexOf(i);
+ let miss=last==-1?20:history.length-last-1;
  let bonus=repeatStatus(i)=="maybe"?2:0;
  return Math.min(miss,14)+bonus+(hot[i]?2:0);
 }
 function meatScore(m){
  if(repeatStatus(m.i)=="block") return -999;
- let miss=history.lastIndexOf(m.i);
- miss=miss==-1?8:history.length-miss-1;
+ let last=history.lastIndexOf(m.i);
+ let miss=last==-1?8:history.length-last-1;
  return Math.min(miss,6)-(m.mult/4);
 }
 
@@ -125,15 +152,23 @@ function render(){
   barDiv.appendChild(r);
  });
 
- /* التوقع حسب الوضع */
+ /* ===== الغايب (أرقام فقط) ===== */
+ missingDiv.innerHTML="";
+ all.forEach(i=>{
+  const last=history.lastIndexOf(i);
+  const gap=last===-1?history.length:history.length-last-1;
+  missingDiv.innerHTML+=`${i} ${gap}<br>`;
+ });
+
+ /* التوقع */
  let picks=[];
  const vRank=veggies.map(i=>({i,s:vegScore(i)})).sort((a,b)=>b.s-a.s);
  const mRank=meats.map(m=>({i:m.i,s:meatScore(m)})).sort((a,b)=>b.s-a.s);
 
- if(mode==1){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟢 خضار فقط (آمن)";}
- if(mode==2){picks=[...vRank.slice(0,3),mRank[0]]; noteDiv.textContent="🟡 لحم ضعيف احتياطي";}
- if(mode==3){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟠 التكرار محسوب";}
- if(mode==4){picks=[...vRank.slice(0,2),mRank[0]]; noteDiv.textContent="🔴 لحم = تحذير";}
+ if(mode==1){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟢 خضار فقط";}
+ if(mode==2){picks=[...vRank.slice(0,3),mRank[0]]; noteDiv.textContent="🟡 لحم ضعيف";}
+ if(mode==3){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟠 تكرار محسوب";}
+ if(mode==4){picks=[...vRank.slice(0,2),mRank[0]]; noteDiv.textContent="🔴 تحذير لحم";}
 
  const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
  predDiv.innerHTML=picks.map(p=>{
