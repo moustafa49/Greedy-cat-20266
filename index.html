@@ -1,204 +1,194 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Greedy Cat – Final Complete</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greedy Cat MAX – Final</title>
 <style>
-body{background:#0f0f0f;color:#fff;font-family:Tahoma;margin:0;text-align:center}
-h1{margin:10px}
-.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:460px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer;user-select:none}
-.item.hot{outline:2px solid orange}
-.mode{padding:6px 10px;border-radius:10px;background:#333;margin:4px;cursor:pointer}
-.mode.active{background:#ff9800;color:#000}
-.bar{display:flex;flex-direction:row-reverse;gap:6px;overflow-x:auto;padding:6px}
-.round{background:#333;padding:4px 6px;border-radius:8px;display:flex;gap:4px;cursor:pointer}
-.num{font-size:10px;color:#aaa}
-.green{color:#4caf50}
-.red{color:#ff5252}
-.orange{color:#ff9800}
-.percent{font-size:13px}
-.small{font-size:13px;color:#bbb}
+body{
+  background:#0f0f0f;color:#fff;font-family:Tahoma;
+  direction:rtl;text-align:center;margin:0;padding:10px
+}
+h1{margin:10px 0}
+.card{
+  background:#1a1a1a;border-radius:16px;
+  padding:12px;margin:10px auto;max-width:420px
+}
+.grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px
+}
+.item{
+  padding:10px;border-radius:12px;
+  background:#222;font-size:26px;
+  cursor:pointer;user-select:none
+}
+.item.hot{outline:3px solid orange}
+.mode button{
+  margin:4px;padding:6px 10px;
+  border-radius:10px;border:0;
+  background:#333;color:#fff
+}
+.mode button.active{background:#ffb300;color:#000}
+.bar{
+  display:flex;overflow-x:auto;gap:6px
+}
+.bar span{
+  background:#333;border-radius:8px;
+  padding:6px 8px;font-size:22px;white-space:nowrap
+}
+.small{font-size:14px;color:#aaa}
+.percent span{margin:0 6px}
+.warn{color:#ffb300}
 </style>
 </head>
-
 <body>
 
-<h1>😺 Greedy Cat – Final</h1>
+<h1>🐱 Greedy Cat MAX</h1>
 
-<div class="box">
-<b>وضع التوقع</b><br>
-<span class="mode active" onclick="setMode('33')">3 + 3</span>
-<span class="mode" onclick="setMode('32')">3 + 2</span>
-<span class="mode" onclick="setMode('31')">3 + 1</span>
-<span class="mode" onclick="setMode('R')">🔁 تكرار</span>
+<div class="card mode">
+  <div class="small">وضع التوقع</div>
+  <button onclick="setMode('3v1')">3+1</button>
+  <button onclick="setMode('3v2')">3+2</button>
+  <button onclick="setMode('3v3')">3+3</button>
+  <button onclick="setMode('reserve5')">احتياطي 5</button>
 </div>
 
-<div class="box">
-<div class="grid" id="items"></div>
-<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT</div>
+<div class="card">
+  <div class="grid" id="items"></div>
+  <div class="small">ضغط = تسجيل | ضغط مطوّل = HOT</div>
 </div>
 
-<div class="box">
-<b>آخر 20 دور</b>
-<div class="bar" id="bar"></div>
+<div class="card">
+  <div>آخر 20 دور</div>
+  <div class="bar" id="bar"></div>
 </div>
 
-<div class="box">
-<b>⏳ الغايب</b>
-<div id="missing" class="small"></div>
+<div class="card">
+  <div>⏳ الغايب</div>
+  <div id="missing"></div>
 </div>
 
-<div class="box">
-<b>🔮 التوقع</b>
-<div id="prediction"></div>
+<div class="card percent">
+  <div>🔮 التوقع (%)</div>
+  <div id="percent"></div>
 </div>
+
+<button onclick="resetAll()">مسح الكل</button>
 
 <script>
-/* ===== البيانات ===== */
-const veggies=["🥕","🌽","🍅","🌶️"];
-const meats=[
- {i:"🦐",mult:10},
- {i:"🐄",mult:15},
- {i:"🐟",mult:25},
- {i:"🐔",mult:45}
-];
-const all=[...veggies,...meats.map(m=>m.i)];
+const veg=['🌶️','🍅','🌽','🥕'];
+const meat=['🐔','🐟','🐮','🦐'];
+
+const all=[...veg,...meat];
+
+const weight={
+ '🌶️':1,'🍅':1,'🌽':1,'🥕':1,
+ '🐔':0.3,'🐟':0.4,'🐮':0.15,'🦐':0.25
+};
 
 let history=[];
-let hotManual=new Set();
-let mode="33";
+let hot=new Set();
+let mode='3v1';
 
-/* ===== DOM ===== */
-const itemsDiv=document.getElementById("items");
-const barDiv=document.getElementById("bar");
-const missingDiv=document.getElementById("missing");
-const predDiv=document.getElementById("prediction");
+const itemsDiv=document.getElementById('items');
 
-/* ===== رسم الأصناف ===== */
-all.forEach(i=>{
- const d=document.createElement("div");
- d.className="item";
- d.textContent=i;
- let press;
- d.onclick=()=>{history.push(i);render()};
- d.onmousedown=()=>{press=setTimeout(()=>{toggleHot(i)},600)};
- d.onmouseup=()=>clearTimeout(press);
- itemsDiv.appendChild(d);
+all.forEach(x=>{
+  let d=document.createElement('div');
+  d.className='item';
+  d.innerText=x;
+  d.onclick=()=>add(x);
+  d.oncontextmenu=e=>{
+    e.preventDefault();
+    hot.has(x)?hot.delete(x):hot.add(x);
+    render();
+  };
+  itemsDiv.appendChild(d);
 });
 
-function toggleHot(i){
- if(hotManual.has(i)) hotManual.delete(i);
- else hotManual.add(i);
- render();
-}
-
-/* ===== تغيير الوضع ===== */
 function setMode(m){
- mode=m;
- document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));
- event.target.classList.add("active");
- render();
+  mode=m;
+  document.querySelectorAll('.mode button')
+    .forEach(b=>b.classList.remove('active'));
+  [...document.querySelectorAll('.mode button')]
+    .find(b=>b.innerText.includes(m.split('v')[0]))?.classList.add('active');
+  calc();
 }
 
-/* ===== حالة التكرار ===== */
-function repeatCount(i){
- return history.slice(-5).filter(x=>x===i).length;
+function add(x){
+  history.push(x);
+  if(history.length>200)history.shift();
+  render();
+  calc();
 }
 
-/* ===== سكورات ===== */
-function vegScore(i){
- const last=history.lastIndexOf(i);
- const miss=last===-1?20:history.length-last-1;
- const rep=repeatCount(i);
- if(rep>=3) return -999;
- return miss + rep*2 + (hotManual.has(i)?2:0);
-}
-function meatScore(m){
- const last=history.lastIndexOf(m.i);
- const miss=last===-1?8:history.length-last-1;
- const rep=repeatCount(m.i);
- if(rep>=2) return -999;
- return miss - (m.mult/4) + (hotManual.has(m.i)?1:0);
-}
-
-/* ===== اختيار مرشحين تكرار ===== */
-function repeatCandidates(){
- return all
-  .map(i=>({
-    i,
-    c:repeatCount(i),
-    s:veggies.includes(i)?vegScore(i):meatScore(meats.find(m=>m.i===i))
-  }))
-  .filter(x=>x.c>=1 && x.s>-500)
-  .sort((a,b)=>(b.c*10+b.s)-(a.c*10+a.s))
-  .slice(0,3);
-}
-
-/* ===== الرسم ===== */
 function render(){
+  document.querySelectorAll('.item').forEach(i=>{
+    hot.has(i.innerText)?i.classList.add('hot'):i.classList.remove('hot');
+  });
 
- /* الشريط */
- barDiv.innerHTML="";
- const start=Math.max(0,history.length-20);
- history.slice(-20).forEach((it,idx)=>{
-  const r=document.createElement("div");
-  r.className="round";
-  r.onclick=()=>{history.splice(start+idx,1);render()};
-  r.innerHTML=`<span class="num">${start+idx+1}</span><span>${it}</span>`;
-  barDiv.appendChild(r);
- });
+  const bar=document.getElementById('bar');
+  bar.innerHTML='';
+  history.slice(-20).forEach((x,i)=>{
+    bar.innerHTML+=`<span>${i+1}:${x}</span>`;
+  });
 
- /* الغايب */
- missingDiv.innerHTML="";
- all.forEach(i=>{
-  const last=history.lastIndexOf(i);
-  const gap=last===-1?history.length:history.length-last-1;
-  missingDiv.innerHTML+=`${i} ${gap}<br>`;
- });
-
- /* الترتيب */
- const vRank=veggies.map(i=>({i,s:vegScore(i)})).sort((a,b)=>b.s-a.s);
- const mRank=meats.map(m=>({i:m.i,s:meatScore(m)})).sort((a,b)=>b.s-a.s);
- const repeats=repeatCandidates();
-
- let picks=[];
-
- if(mode==="R"){
-  repeats.forEach(r=>picks.push(r));
- }
-
- if(mode==="31"){
-  const top=vRank[0];
-  picks.push(top);
-  if(repeatCount(top.i)>=1) picks.push(top);
-  picks.push(mRank[0]);
- }
-
- if(mode==="32") picks=[...vRank.slice(0,3),...mRank.slice(0,2)];
- if(mode==="33") picks=[...vRank.slice(0,3),...mRank.slice(0,3)];
-
- const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
-
- predDiv.innerHTML=picks.map(p=>{
-  const isVeg=veggies.includes(p.i);
-  const cls=isVeg?"green":"red";
-  const tag=repeatCount(p.i)>=1?" 🔁":"";
-  const pct=((Math.max(p.s,0)/sum)*100).toFixed(1);
-  return `<span class="${cls}">${p.i}${tag} <span class="percent">${pct}%</span></span>`;
- }).join(" ");
-
- /* HOT UI */
- document.querySelectorAll(".item").forEach(d=>{
-  d.classList.toggle("hot",hotManual.has(d.textContent));
- });
+  let miss='';
+  all.forEach(x=>{
+    let i=history.lastIndexOf(x);
+    let g=i===-1?history.length:history.length-i-1;
+    miss+=`${x} غايب ${g} دور<br>`;
+  });
+  document.getElementById('missing').innerHTML=miss;
 }
 
-render();
-</script>
+function meatSignal(){
+  let last=history.slice(-6);
+  let mc=last.filter(x=>meat.includes(x)).length;
+  let hotMeat=[...hot].some(x=>meat.includes(x));
+  let missMeat=meat.some(x=>{
+    let i=history.lastIndexOf(x);
+    let g=i===-1?history.length:history.length-i-1;
+    return g>=8;
+  });
+  return mc>=2||hotMeat||missMeat;
+}
 
+function pick(arr,n){
+  return [...arr]
+    .sort((a,b)=>(weight[b]+(hot.has(b)?0.3:0))-(weight[a]+(hot.has(a)?0.3:0)))
+    .slice(0,n);
+}
+
+function calc(){
+  let res=[];
+  if(mode==='3v1')res=[...pick(veg,3),...pick(meat,1)];
+  if(mode==='3v2')res=[...pick(veg,3),...pick(meat,2)];
+  if(mode==='3v3')res=[...pick(veg,3),...pick(meat,3)];
+  if(mode==='reserve5'){
+    if(meatSignal())res=[...pick(meat,4),...pick(veg,2)];
+    else res=[...pick(veg,4),...pick(meat,2)];
+  }
+
+  let sum=0;
+  let p={};
+  all.forEach(x=>{
+    let v=(weight[x]||0)+(hot.has(x)?0.3:0)+(res.includes(x)?0.2:0);
+    p[x]=v;sum+=v;
+  });
+
+  let out='';
+  Object.keys(p).forEach(x=>{
+    out+=`<span>${x} ${(p[x]/sum*100).toFixed(1)}%</span>`;
+  });
+  document.getElementById('percent').innerHTML=out;
+}
+
+function resetAll(){
+  history=[];hot.clear();
+  render();calc();
+}
+
+render();calc();
+</script>
 </body>
 </html>
