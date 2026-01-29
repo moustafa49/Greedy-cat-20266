@@ -3,64 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🥕 Greedy Cat – Smart Veg</title>
+<title>Greedy Cat – Final Smart Veg</title>
 
 <style>
-body{
-  background:#0f0f0f;color:#fff;
-  font-family:Tahoma,Arial;text-align:center;margin:0
-}
+body{background:#0f0f0f;color:#fff;font-family:Tahoma;margin:0;text-align:center}
 h1{margin:10px}
-.box{
-  background:#1a1a1a;border-radius:14px;
-  padding:12px;margin:10px auto;max-width:440px
-}
-.grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px
-}
-.item{
-  font-size:26px;padding:10px;border-radius:12px;
-  background:#222;cursor:pointer;user-select:none
-}
-.item.hot{outline:2px solid orange}
-.bar{
-  display:flex;flex-direction:row-reverse;
-  gap:6px;overflow-x:auto;padding:6px
-}
-.round{
-  background:#333;padding:4px 6px;
-  border-radius:8px;font-size:16px;
-  display:flex;gap:4px;cursor:pointer
-}
-.num{font-size:10px;color:#aaa}
-.mode{
-  padding:6px 10px;border-radius:10px;
-  background:#333;margin:4px;cursor:pointer
-}
+.box{background:#1a1a1a;border-radius:14px;padding:12px;margin:10px auto;max-width:440px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.item{font-size:26px;padding:10px;border-radius:12px;background:#222;cursor:pointer}
+.mode{padding:6px 10px;border-radius:10px;background:#333;margin:4px;cursor:pointer}
 .mode.active{background:#ff9800;color:#000}
+.bar{display:flex;flex-direction:row-reverse;gap:6px;overflow-x:auto;padding:6px}
+.round{background:#333;padding:4px 6px;border-radius:8px;display:flex;gap:4px;cursor:pointer}
+.num{font-size:10px;color:#aaa}
 .green{color:#4caf50}
 .red{color:#ff5252}
 .orange{color:#ff9800}
-.small{font-size:13px;color:#bbb}
 .percent{font-size:13px}
+.small{font-size:13px;color:#bbb}
 </style>
 </head>
 
 <body>
 
-<h1>🥕 Greedy Cat – Smart Veg</h1>
+<h1>🥕 Greedy Cat – Smart Veg (Final)</h1>
 
 <div class="box">
-<b>وضع اللعب</b><br>
-<span class="mode active" onclick="setMode(1)">🟢 آمن</span>
-<span class="mode" onclick="setMode(2)">🟡 متوازن</span>
-<span class="mode" onclick="setMode(3)">🟠 تكرار</span>
-<span class="mode" onclick="setMode(4)">🔴 فخ</span>
+<b>وضع التوقع</b><br>
+<span class="mode active" onclick="setMode('33')">3 + 3</span>
+<span class="mode" onclick="setMode('32')">3 + 2</span>
+<span class="mode" onclick="setMode('31')">3 + 1</span>
+<span class="mode" onclick="setMode('R')">🔁 تكرار</span>
 </div>
 
 <div class="box">
 <div class="grid" id="items"></div>
-<div class="small">ضغط = تسجيل | ضغط مطوّل = HOT</div>
+<div class="small">اضغط لتسجيل الدور</div>
 </div>
 
 <div class="box">
@@ -69,14 +47,13 @@ h1{margin:10px}
 </div>
 
 <div class="box">
-<b>⏳ الغايب (أرقام فقط)</b>
+<b>⏳ الغايب</b>
 <div id="missing" class="small"></div>
 </div>
 
 <div class="box">
 <b>🔮 التوقع</b>
 <div id="prediction"></div>
-<div id="note" class="small"></div>
 </div>
 
 <script>
@@ -89,23 +66,18 @@ const meats=[
 ];
 const all=[...veggies,...meats.map(m=>m.i)];
 
-let history=[], hot={}, mode=1;
+let history=[], mode="33";
 
 const itemsDiv=document.getElementById("items");
 const barDiv=document.getElementById("bar");
 const missingDiv=document.getElementById("missing");
 const predDiv=document.getElementById("prediction");
-const noteDiv=document.getElementById("note");
 
-/* رسم الأصناف */
 all.forEach(i=>{
  const d=document.createElement("div");
  d.className="item";
  d.textContent=i;
- let t;
  d.onclick=()=>{history.push(i);render()};
- d.onmousedown=()=>{t=setTimeout(()=>{hot[i]=!hot[i];render()},600)};
- d.onmouseup=()=>clearTimeout(t);
  itemsDiv.appendChild(d);
 });
 
@@ -116,7 +88,6 @@ function setMode(m){
  render();
 }
 
-/* حالة التكرار */
 function repeatStatus(i){
  const c=history.slice(-3).filter(x=>x===i).length;
  if(c>=3) return "block";
@@ -125,19 +96,19 @@ function repeatStatus(i){
  return "safe";
 }
 
-/* سكورات */
 function vegScore(i){
- if(repeatStatus(i)=="block") return -999;
- let last=history.lastIndexOf(i);
- let miss=last==-1?20:history.length-last-1;
- let bonus=repeatStatus(i)=="maybe"?2:0;
- return Math.min(miss,14)+bonus+(hot[i]?2:0);
+ if(repeatStatus(i)==="block") return -999;
+ const last=history.lastIndexOf(i);
+ const miss=last===-1?20:history.length-last-1;
+ const repeatBonus=repeatStatus(i)==="maybe"?3:0;
+ return miss+repeatBonus;
 }
+
 function meatScore(m){
- if(repeatStatus(m.i)=="block") return -999;
- let last=history.lastIndexOf(m.i);
- let miss=last==-1?8:history.length-last-1;
- return Math.min(miss,6)-(m.mult/4);
+ if(repeatStatus(m.i)==="block") return -999;
+ const last=history.lastIndexOf(m.i);
+ const miss=last===-1?6:history.length-last-1;
+ return miss-(m.mult/4);
 }
 
 function render(){
@@ -152,7 +123,7 @@ function render(){
   barDiv.appendChild(r);
  });
 
- /* ===== الغايب (أرقام فقط) ===== */
+ /* الغايب (أرقام فقط) */
  missingDiv.innerHTML="";
  all.forEach(i=>{
   const last=history.lastIndexOf(i);
@@ -160,27 +131,44 @@ function render(){
   missingDiv.innerHTML+=`${i} ${gap}<br>`;
  });
 
- /* التوقع */
- let picks=[];
- const vRank=veggies.map(i=>({i,s:vegScore(i)})).sort((a,b)=>b.s-a.s);
- const mRank=meats.map(m=>({i:m.i,s:meatScore(m)})).sort((a,b)=>b.s-a.s);
+ /* ترتيب */
+ const vRank=veggies.map(i=>({i,s:vegScore(i),r:repeatStatus(i)}))
+                    .sort((a,b)=>b.s-a.s);
+ const mRank=meats.map(m=>({i:m.i,s:meatScore(m)}))
+                   .sort((a,b)=>b.s-a.s);
 
- if(mode==1){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟢 خضار فقط";}
- if(mode==2){picks=[...vRank.slice(0,3),mRank[0]]; noteDiv.textContent="🟡 لحم ضعيف";}
- if(mode==3){picks=[...vRank.slice(0,3)]; noteDiv.textContent="🟠 تكرار محسوب";}
- if(mode==4){picks=[...vRank.slice(0,2),mRank[0]]; noteDiv.textContent="🔴 تحذير لحم";}
+ let picks=[];
+
+ if(mode==="R"){
+   const top=vRank[0];
+   picks.push(top);
+   if(top.r==="maybe" || top.r==="high") picks.push(top);
+ }
+
+ if(mode==="31"){
+   const top=vRank[0];
+   picks.push(top);
+   if(top.r==="maybe") picks.push(top);
+   picks.push(mRank[0]);
+ }
+
+ if(mode==="32"){
+   picks=[...vRank.slice(0,3),...mRank.slice(0,2)];
+ }
+
+ if(mode==="33"){
+   picks=[...vRank.slice(0,3),...mRank.slice(0,3)];
+ }
 
  const sum=picks.reduce((a,b)=>a+Math.max(b.s,0),0)||1;
  predDiv.innerHTML=picks.map(p=>{
-  const cls=veggies.includes(p.i)?"green":"red";
-  const tag=repeatStatus(p.i)=="maybe"?" 🔁":"";
+  const isVeg=veggies.includes(p.i);
+  const cls=isVeg?"green":"red";
+  const tag=p.r==="maybe"?" 🔁":"";
   return `<span class="${cls}">${p.i}${tag} ${(Math.max(p.s,0)/sum*100).toFixed(1)}%</span>`;
  }).join(" ");
-
- document.querySelectorAll(".item").forEach(d=>{
-  d.classList.toggle("hot",hot[d.textContent]);
- });
 }
+
 render();
 </script>
 
